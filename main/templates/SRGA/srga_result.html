@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SRGA 推理结果</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+            background-color: #f5f5f5;
+            color: #2c3e50;
+        }
+        .header {
+            background-color: #2c3e50;
+            color: white;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .header-logo { font-size: 18px; font-weight: bold; }
+        .back-btn {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 30px;
+        }
+        .card {
+            background: white;
+            padding: 22px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 18px;
+        }
+        .title { font-size: 18px; font-weight: bold; margin-bottom: 12px; }
+        .meta {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 12px;
+            margin-top: 10px;
+        }
+        .kv {
+            border: 1px solid #eee;
+            border-radius: 8px;
+            padding: 12px;
+            background: #fafafa;
+        }
+        .k { color: #7f8c8d; font-size: 12px; margin-bottom: 6px; }
+        .v { font-size: 14px; }
+        .badge {
+            display: inline-block;
+            padding: 6px 10px;
+            border-radius: 999px;
+            background: #e8f4fd;
+            color: #1b6ea8;
+            font-weight: 600;
+            font-size: 13px;
+        }
+        .error {
+            background: #fff5f5;
+            border: 1px solid #ffd6d6;
+            color: #b30000;
+            padding: 12px 14px;
+            border-radius: 8px;
+            line-height: 1.6;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            text-align: left;
+            border-bottom: 1px solid #eee;
+            padding: 10px 8px;
+            font-size: 14px;
+        }
+        th { color: #7f8c8d; font-weight: 600; font-size: 12px; }
+        .probbar {
+            height: 10px;
+            background: #f0f2f5;
+            border-radius: 999px;
+            overflow: hidden;
+        }
+        .probbar > div {
+            height: 100%;
+            background: #3498db;
+            border-radius: 999px;
+        }
+        .btn {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            white-space: nowrap;
+        }
+        .btn:hover { background-color: #2980b9; }
+        .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+        @media (max-width: 900px) {
+            .meta { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-logo">✦ SRGA 推理结果</div>
+        <div style="display:flex; gap: 10px; align-items:center;">
+            <a class="back-btn" href="{% url 'dashboard' %}">返回主页</a>
+            <a class="back-btn" href="/srga/record/">← 重新采集</a>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="card">
+            <div class="title">本次采集信息</div>
+            <div class="meta">
+                <div class="kv">
+                    <div class="k">用户编号 user_id</div>
+                    <div class="v" id="v-user-id">{{ user_id|default:"-" }}</div>
+                </div>
+                <div class="kv">
+                    <div class="k">姓名</div>
+                    <div class="v" id="v-name">{{ name|default:"-" }}</div>
+                </div>
+                <div class="kv">
+                    <div class="k">采集时间</div>
+                    <div class="v" id="v-collect-time">{{ collect_time|default:"-" }}</div>
+                </div>
+                <div class="kv">
+                    <div class="k">身高 (cm)</div>
+                    <div class="v" id="v-height-cm">{{ height_cm }}</div>
+                </div>
+                <div class="kv">
+                    <div class="k">体重 (kg)</div>
+                    <div class="v" id="v-weight-kg">{{ weight_kg }}</div>
+                </div>
+                <div class="kv">
+                    <div class="k">年龄 (可选)</div>
+                    <div class="v">{{ age }}</div>
+                </div>
+            </div>
+        </div>
+
+        {% if error %}
+            <div class="card">
+                <div class="title">结果</div>
+                <div class="error">{{ error }}</div>
+            </div>
+        {% elif result %}
+            <div class="card">
+                <div class="title">推理结论</div>
+                <div style="display:flex; gap: 12px; align-items:center; flex-wrap: wrap;">
+                    <span class="badge">预测：<span id="v-pred-label">{{ result.pred_label }}</span></span>
+                    <span class="badge">置信度：{{ result.confidence|floatformat:4 }}（{{ result.confidence_percent|floatformat:2 }}%）</span>
+                    <span class="badge">设备：{{ result.device }}</span>
+                </div>
+                <div style="margin-top: 10px; color:#7f8c8d; font-size: 12px;">
+                    权重：{{ result.checkpoint_path }}
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="title">概率分布</div>
+                <table id="probs-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 70px;">Idx</th>
+                            <th>Label</th>
+                            <th style="width: 120px;">Prob</th>
+                            <th style="width: 220px;">Bar</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in result.probs %}
+                            <tr>
+                                <td>{{ item.idx }}</td>
+                                <td>{{ item.label }}</td>
+                                <td>{{ item.prob|floatformat:4 }}</td>
+                                <td>
+                                    <div class="probbar">
+                                        <div style="width: {{ item.prob_percent|floatformat:2 }}%;"></div>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="card">
+                <div class="title">结果</div>
+                <div class="error">未获取到推理结果。请返回采集页面重新提交。</div>
+            </div>
+        {% endif %}
+
+        <div class="card">
+            <div class="title">保存</div>
+            <div class="actions">
+                <button id="btn-save" class="btn" type="button">保存</button>
+            </div>
+            <div style="margin-top: 10px; color:#7f8c8d; font-size: 12px; line-height: 1.6;">
+                点击“保存”会把本页展示的用户信息与 label 信息整理成一个变量，并弹窗显示（不写入后端）。
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const $ = (sel) => document.querySelector(sel);
+
+        function textOf(sel) {
+            const el = $(sel);
+            return (el && el.textContent ? el.textContent : "").trim();
+        }
+
+        function parseProbsFromTable() {
+            const table = $("#probs-table");
+            if (!table) return [];
+            const rows = table.querySelectorAll("tbody tr");
+            const out = [];
+            for (const tr of rows) {
+                const tds = tr.querySelectorAll("td");
+                if (!tds || tds.length < 3) continue;
+                out.push({
+                    idx: (tds[0].textContent || "").trim(),
+                    label: (tds[1].textContent || "").trim(),
+                    prob: (tds[2].textContent || "").trim()
+                });
+            }
+            return out;
+        }
+
+        const btnSave = $("#btn-save");
+        if (btnSave) {
+            btnSave.addEventListener("click", () => {
+                const savedData = {
+                    user_id: textOf("#v-user-id"),
+                    name: textOf("#v-name"),
+                    collect_time: textOf("#v-collect-time"),
+                    height_cm: textOf("#v-height-cm"),
+                    weight_kg: textOf("#v-weight-kg"),
+                    label_info: {
+                        pred_label: textOf("#v-pred-label") || "-",
+                        probs: parseProbsFromTable()
+                    }
+                };
+
+                window.__SRGA_SAVED__ = savedData;
+                alert(JSON.stringify(savedData, null, 2));
+            });
+        }
+    </script>
+</body>
+</html>
+

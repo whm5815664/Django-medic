@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SRGA 健康评估采集</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+            background-color: #f5f5f5;
+            color: #2c3e50;
+        }
+        .header {
+            background-color: #2c3e50;
+            color: white;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .header-logo { font-size: 18px; font-weight: bold; }
+        .back-btn {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 30px;
+        }
+        .card {
+            background: white;
+            padding: 22px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 18px;
+        }
+        .section-title { font-size: 18px; font-weight: bold; margin-bottom: 12px; color: #2c3e50; }
+        .row {
+            display: flex;
+            gap: 14px;
+            align-items: flex-end;
+            flex-wrap: wrap;
+        }
+        .field { display: flex; flex-direction: column; gap: 6px; min-width: 220px; }
+        label { font-size: 12px; color: #7f8c8d; }
+        input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .btn {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            white-space: nowrap;
+        }
+        .btn:hover { background-color: #2980b9; }
+        .btn-secondary {
+            background-color: white;
+            color: #2c3e50;
+            border: 1px solid #ddd;
+        }
+        .btn-secondary:hover { background-color: #f8f9fa; }
+        .btn-danger {
+            background-color: #e74c3c;
+        }
+        .btn-danger:hover { background-color: #c0392b; }
+        .preview-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+        .preview {
+            border: 1px dashed #ddd;
+            border-radius: 8px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+            max-width: 520px;
+        }
+        .media-box {
+            width: 100%;
+            max-width: 520px;
+        }
+        video {
+            width: 100%;
+            max-width: 520px;
+            border-radius: 8px;
+            background: #000;
+        }
+        img {
+            max-width: 520px;
+            width: 100%;
+            border-radius: 8px;
+        }
+        audio { width: 100%; max-width: 520px; }
+        .status {
+            background: #f8f9fa;
+            border: 1px solid #eee;
+            border-radius: 6px;
+            padding: 10px 12px;
+            color: #2c3e50;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        .muted { color: #7f8c8d; font-size: 12px; }
+        .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+        .hidden { display: none; }
+        @media (max-width: 900px) {
+            .preview-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-logo">✦ 国民体质健康监测</div>
+        <a class="back-btn" href="/">← 返回</a>
+    </div>
+
+    <div class="container">
+        <div class="card">
+            <div class="section-title">健康评估采集</div>
+            <div class="row">
+                <div class="field">
+                    <label for="user_id">用户编号</label>
+                    <input id="user_id" name="user_id" type="text" placeholder="例如 001 或 A123" />
+                </div>
+                <div class="field">
+                    <label for="name">姓名</label>
+                    <input id="name" name="name" type="text" placeholder="请输入姓名" />
+                </div>
+                <div class="field">
+                    <label for="collect_time">采集时间</label>
+                    <input id="collect_time" name="collect_time" type="datetime-local" readonly />
+                </div>
+            </div>
+            <br>
+            <div class="row">
+                <div class="field">
+                    <label for="height_cm">身高 height (cm)</label>
+                    <input id="height_cm" name="height_cm" type="number" step="0.1" min="80" max="230" placeholder="例如 175" />
+                </div>
+                <div class="field">
+                    <label for="weight_kg">体重 weight (kg)</label>
+                    <input id="weight_kg" name="weight_kg" type="number" step="0.1" min="20" max="200" placeholder="例如 70" />
+                </div>
+                <div class="field">
+                    <label for="age">年龄 age</label>
+                    <input id="age" name="age" type="number" step="1" min="0" max="120" placeholder="例如 28" />
+                </div>
+                <div class="field" style="min-width: 240px;">
+                    <label for="audio_slice_seconds">最后一段音频长度（秒）</label>
+                    <input id="audio_slice_seconds" name="audio_slice_seconds" type="number" step="0.1" min="0.5" max="8" value="2.0" />
+                </div>
+            </div>
+            <div style="margin-top: 12px;" class="muted">
+                提示：开始后请让摄像头录制一段时间。停止后系统会自动截取“最后一帧图像”和“最后 N 秒音频”并提交到后端保存为数据输入。
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="section-title">采集预览</div>
+            <div class="actions">
+                <button id="btn-start" class="btn">开始录制</button>
+                <button id="btn-stop" class="btn btn-secondary" disabled>停止录制</button>
+                <button id="btn-reset" class="btn btn-secondary" disabled>重置</button>
+            </div>
+            <br><hr><br>
+            <div class="row" style="align-items: flex-start;">
+                <div style="flex: 1; min-width: 320px;">
+                    <div class="muted" style="margin-bottom: 8px;">摄像头实时画面</div>
+                    <div class="media-box">
+                        <video id="liveVideo" autoplay playsinline muted></video>
+                        <div class="muted" style="margin: 10px 0 6px;">麦克风音频图（时间-音量）</div>
+                        <canvas id="micViz" height="90" style="width: 100%; border: 1px solid #eee; border-radius: 8px; background: #fff;"></canvas>
+                    </div>
+                </div>
+                <div style="flex: 1; min-width: 320px;">
+                    <div class="muted" style="margin-bottom: 8px;">截取结果预览</div>
+                    <div class="preview" style="align-items: stretch;">
+                        <div id="extractingHint" class="muted">尚未截取</div>
+                        <img id="lastFramePreview" class="hidden" alt="最后一帧图像预览" />
+                        <div style="margin-top: 10px;" class="hidden" id="audioPreviewWrap">
+                            <audio id="lastAudioPreview" controls></audio>
+                        </div>
+                        <div id="serverResult" class="status hidden" style="margin-top: 12px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="section-title">表单提交</div>
+            <div class="actions">
+                <button id="btn-submit" class="btn" disabled>提交表单</button>
+            </div>
+        </div>
+
+        <form id="srgaForm" method="post" class="hidden">
+            {% csrf_token %}
+        </form>
+    </div>
+
+    <script>
+        const $ = (sel) => document.querySelector(sel);
+
+        const btnStart = $("#btn-start");
+        const btnStop = $("#btn-stop");
+        const btnReset = $("#btn-reset");
+        const btnSubmit = $("#btn-submit");
+        const liveVideo = $("#liveVideo");
+        const micViz = $("#micViz");
+        const lastFramePreview = $("#lastFramePreview");
+        const audioPreviewWrap = $("#audioPreviewWrap");
+        const lastAudioPreview = $("#lastAudioPreview");
+        const extractingHint = $("#extractingHint");
+        const serverResult = $("#serverResult");
+
+        const heightInput = $("#height_cm");
+        const weightInput = $("#weight_kg");
+        const ageInput = $("#age");
+        const nameInput = $("#name");
+        const collectTimeInput = $("#collect_time");
+        const userIdInput = $("#user_id");
+        const audioSliceSecondsInput = $("#audio_slice_seconds");
+
+        // 自动填充采集时间（datetime-local 格式：YYYY-MM-DDTHH:mm）
+        function toLocalDateTimeValue(date) {
+            const pad = (n) => String(n).padStart(2, "0");
+            return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+        }
+        if (collectTimeInput) {
+            collectTimeInput.value = toLocalDateTimeValue(new Date());
+        }
+
+        let mediaStream = null;
+        let mediaRecorder = null;
+        let recordedChunks = [];
+        let currentMimeType = null;
+        let extractedLastFrameB64 = "";
+        let extractedLastAudioWavB64 = "";
+        let micAudioCtx = null;
+        let micAnalyser = null;
+        let micAnimId = null;
+        let micHistory = [];
+        const MIC_HISTORY_MAX = 240; // 约 4 秒@60fps
+
+        function setStatus(msg, show = true) {
+            if (!show) return;
+            serverResult.classList.remove("hidden");
+            serverResult.textContent = msg;
+        }
+
+        function startMicViz(stream) {
+            if (!micViz) return;
+            stopMicViz();
+
+            const audioTracks = stream && stream.getAudioTracks ? stream.getAudioTracks() : [];
+            if (!audioTracks || audioTracks.length === 0) return;
+
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (!AudioCtx) return;
+
+            micAudioCtx = new AudioCtx();
+            const source = micAudioCtx.createMediaStreamSource(stream);
+            micAnalyser = micAudioCtx.createAnalyser();
+            micAnalyser.fftSize = 2048;
+            micAnalyser.smoothingTimeConstant = 0.8;
+            source.connect(micAnalyser);
+
+            const ctx = micViz.getContext("2d");
+            const buf = new Uint8Array(micAnalyser.fftSize);
+            micHistory = [];
+
+            const draw = () => {
+                micAnimId = requestAnimationFrame(draw);
+                if (!micAnalyser) return;
+
+                micAnalyser.getByteTimeDomainData(buf);
+                let sumSq = 0;
+                for (let i = 0; i < buf.length; i++) {
+                    const v = (buf[i] - 128) / 128; // [-1,1]
+                    sumSq += v * v;
+                }
+                const rms = Math.sqrt(sumSq / buf.length); // [0,1]
+                micHistory.push(rms);
+                if (micHistory.length > MIC_HISTORY_MAX) micHistory.shift();
+
+                const rect = micViz.getBoundingClientRect();
+                const w = Math.max(1, Math.round(rect.width));
+                const h = Math.max(1, micViz.height || 90);
+                if (micViz.width !== w) micViz.width = w; // 让 canvas 与 CSS 宽度一致
+                if (micViz.height !== h) micViz.height = h;
+
+                ctx.clearRect(0, 0, w, h);
+
+                // 背景网格
+                ctx.strokeStyle = "#f0f2f5";
+                ctx.lineWidth = 1;
+                for (let i = 1; i <= 4; i++) {
+                    const y = Math.round((h * i) / 5);
+                    ctx.beginPath();
+                    ctx.moveTo(0, y);
+                    ctx.lineTo(w, y);
+                    ctx.stroke();
+                }
+
+                // 中线/基线
+                ctx.strokeStyle = "#e6e9ee";
+                ctx.beginPath();
+                ctx.moveTo(0, h - 1);
+                ctx.lineTo(w, h - 1);
+                ctx.stroke();
+
+                // 音量曲线（滚动）
+                ctx.strokeStyle = "#3498db";
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                const n = micHistory.length;
+                for (let i = 0; i < n; i++) {
+                    const x = (i / Math.max(1, MIC_HISTORY_MAX - 1)) * w;
+                    const y = h - (micHistory[i] * (h - 6)) - 3;
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.stroke();
+
+                // 当前值标签
+                const last = micHistory[n - 1] || 0;
+                ctx.fillStyle = "#2c3e50";
+                ctx.font = "12px -apple-system, BlinkMacSystemFont, Segoe UI, Microsoft YaHei, sans-serif";
+                ctx.fillText(`音量: ${Math.round(last * 100)}%`, 10, 16);
+            };
+
+            draw();
+        }
+
+        function stopMicViz() {
+            if (micAnimId) {
+                try { cancelAnimationFrame(micAnimId); } catch (_) {}
+                micAnimId = null;
+            }
+            micAnalyser = null;
+            micHistory = [];
+            if (micAudioCtx) {
+                try { micAudioCtx.close(); } catch (_) {}
+                micAudioCtx = null;
+            }
+            if (micViz) {
+                const ctx = micViz.getContext("2d");
+                if (ctx) ctx.clearRect(0, 0, micViz.width || 1, micViz.height || 1);
+            }
+        }
+
+        function setExtracting(msg) {
+            extractingHint.textContent = msg;
+        }
+
+        function hideExtracting() {
+            extractingHint.classList.add("hidden");
+        }
+
+        function showPreviewNone() {
+            extractingHint.classList.remove("hidden");
+            extractingHint.textContent = "尚未截取";
+            lastFramePreview.classList.add("hidden");
+            audioPreviewWrap.classList.add("hidden");
+            lastFramePreview.removeAttribute("src");
+            lastAudioPreview.removeAttribute("src");
+            serverResult.classList.add("hidden");
+            extractedLastFrameB64 = "";
+            extractedLastAudioWavB64 = "";
+            if (btnSubmit) btnSubmit.disabled = true;
+        }
+
+        function pickSupportedMimeType() {
+            const candidates = [
+                "video/webm;codecs=vp9,opus",
+                "video/webm;codecs=vp8,opus",
+                "video/webm"
+            ];
+            for (const t of candidates) {
+                if (MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t)) return t;
+            }
+            return null;
+        }
+
+        async function getAudioInputCount() {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) return 0;
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            return devices.filter(d => d && d.kind === "audioinput").length;
+        }
+
+        function stopStream(stream) {
+            try {
+                if (!stream) return;
+                for (const t of stream.getTracks()) {
+                    try { t.stop(); } catch (_) {}
+                }
+            } catch (_) {}
+        }
+
+        async function initCamera() {
+            // 页面打开后即显示实时画面；“录制”只在点击开始录制后才触发 MediaRecorder
+            try {
+                const audioInputCount = await getAudioInputCount();
+                if (audioInputCount <= 0) {
+                    setStatus("未检测到可用麦克风（audioinput）。请接入/启用麦克风后再开始。");
+                    return;
+                }
+
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: true,
+                    audio: true
+                });
+
+                // 二次校验：必须拿到音轨（有些环境下 audioinput 存在但仍可能取不到音轨）
+                const audioTracks = stream.getAudioTracks ? stream.getAudioTracks() : [];
+                if (!audioTracks || audioTracks.length === 0) {
+                    stopStream(stream);
+                    setStatus("麦克风不可用或被占用/禁用，已阻止启动摄像头。请检查系统麦克风设置与浏览器权限。");
+                    return;
+                }
+
+                mediaStream = stream;
+                liveVideo.srcObject = stream;
+                await liveVideo.play();
+                startMicViz(stream);
+            } catch (e) {
+                setStatus("打开摄像头失败：" + (e && e.message ? e.message : String(e)));
+                console.error(e);
+            }
+        }
+
+        function pcm16WavFromAudioBuffer(audioBuffer) {
+            // 将 AudioBuffer 编码为 PCM16 WAV（浏览器原生不直接提供编码器）
+            const numChannels = audioBuffer.numberOfChannels;
+            const sampleRate = audioBuffer.sampleRate;
+            const length = audioBuffer.length;
+
+            // 混成单声道，取平均
+            const channelData = audioBuffer.getChannelData(0);
+            let mixed = new Float32Array(length);
+            if (numChannels === 1) {
+                mixed = channelData;
+            } else {
+                mixed = new Float32Array(length);
+                for (let ch = 0; ch < numChannels; ch++) {
+                    const data = audioBuffer.getChannelData(ch);
+                    for (let i = 0; i < length; i++) mixed[i] += data[i] / numChannels;
+                }
+            }
+
+            // PCM16: [-1,1] -> int16
+            const bytesPerSample = 2;
+            const blockAlign = bytesPerSample * 1; // mono
+            const byteRate = sampleRate * blockAlign;
+            const dataSize = length * bytesPerSample;
+
+            const buffer = new ArrayBuffer(44 + dataSize);
+            const view = new DataView(buffer);
+
+            function writeString(offset, str) {
+                for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
+            }
+            function floatTo16BitPCM(offset, input) {
+                let i = 0;
+                for (; i < input.length; i++, offset += 2) {
+                    let s = Math.max(-1, Math.min(1, input[i]));
+                    view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+                }
+            }
+
+            writeString(0, "RIFF");
+            view.setUint32(4, 36 + dataSize, true);
+            writeString(8, "WAVE");
+
+            writeString(12, "fmt ");
+            view.setUint32(16, 16, true); // PCM
+            view.setUint16(20, 1, true);  // audio format = PCM
+            view.setUint16(22, 1, true);  // numChannels = 1
+            view.setUint32(24, sampleRate, true);
+            view.setUint32(28, byteRate, true);
+            view.setUint16(32, blockAlign, true);
+            view.setUint16(34, 16, true); // bitsPerSample
+
+            writeString(36, "data");
+            view.setUint32(40, dataSize, true);
+
+            floatTo16BitPCM(44, mixed);
+            return new Uint8Array(buffer);
+        }
+
+        function base64FromBlob(blob) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onerror = () => reject(new Error("读取文件失败"));
+                reader.onload = () => {
+                    const dataUrl = reader.result;
+                    const base64 = (dataUrl.split(",")[1] || "");
+                    resolve(base64);
+                };
+                reader.readAsDataURL(blob);
+            });
+        }
+
+        async function extractLastFrameAndAudio(videoBlob, audioSliceSeconds) {
+            // 1) 截取最后一帧图像
+            const frameCanvas = document.createElement("canvas");
+            const tempVideo = document.createElement("video");
+            tempVideo.muted = true;
+            tempVideo.playsInline = true;
+            tempVideo.src = URL.createObjectURL(videoBlob);
+
+            await new Promise((resolve, reject) => {
+                tempVideo.onloadedmetadata = () => resolve();
+                tempVideo.onerror = () => reject(new Error("加载视频元数据失败"));
+            });
+
+            // 往回跳一点点，避免 seek 到最后一帧时边界问题
+            const duration = tempVideo.duration || 0;
+            const targetTime = Math.max(duration - 0.05, 0);
+
+            await new Promise((resolve, reject) => {
+                tempVideo.onseeked = () => resolve();
+                tempVideo.onerror = () => reject(new Error("视频 seek 失败"));
+                tempVideo.currentTime = targetTime;
+            });
+
+            // 目标尺寸：不强行固定，直接生成 JPEG 后由后端/模型侧再 resize
+            const vw = tempVideo.videoWidth || 640;
+            const vh = tempVideo.videoHeight || 480;
+            const maxSide = 640;
+            const scale = Math.min(maxSide / vw, maxSide / vh, 1);
+            frameCanvas.width = Math.max(1, Math.round(vw * scale));
+            frameCanvas.height = Math.max(1, Math.round(vh * scale));
+
+            const ctx = frameCanvas.getContext("2d");
+            ctx.drawImage(tempVideo, 0, 0, frameCanvas.width, frameCanvas.height);
+
+            const jpegDataUrl = frameCanvas.toDataURL("image/jpeg", 0.85);
+            const lastFrameB64 = jpegDataUrl.split(",")[1] || "";
+
+            URL.revokeObjectURL(tempVideo.src);
+
+            // 2) 截取最后一段音频
+            setExtracting("正在解码视频音频并截取最后音频...");
+            const arrBuf = await videoBlob.arrayBuffer();
+
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            let audioBuffer = null;
+            try {
+                audioBuffer = await audioCtx.decodeAudioData(arrBuf);
+            } catch (e) {
+                audioCtx.close();
+                throw new Error("音频解码失败（可能是浏览器/编码格式不兼容）");
+            }
+
+            const sampleRate = audioBuffer.sampleRate;
+            const sliceSeconds = Number(audioSliceSeconds) || 2.0;
+
+            const sliceEnd = audioBuffer.duration;
+            const sliceStart = Math.max(sliceEnd - sliceSeconds, 0);
+
+            const startSample = Math.floor(sliceStart * sampleRate);
+            const endSample = Math.floor(sliceEnd * sampleRate);
+            const slicedLength = Math.max(0, endSample - startSample);
+
+            // 创建切片 AudioBuffer（单声道混合在编码阶段完成）
+            const sliced = audioCtx.createBuffer(audioBuffer.numberOfChannels, slicedLength, sampleRate);
+            for (let ch = 0; ch < audioBuffer.numberOfChannels; ch++) {
+                const src = audioBuffer.getChannelData(ch);
+                const dst = sliced.getChannelData(ch);
+                for (let i = 0; i < slicedLength; i++) dst[i] = src[startSample + i] || 0;
+            }
+
+            const wavBytes = pcm16WavFromAudioBuffer(sliced);
+            const wavBlob = new Blob([wavBytes], { type: "audio/wav" });
+            const lastAudioB64 = await base64FromBlob(wavBlob);
+
+            const wavUrl = URL.createObjectURL(wavBlob);
+            audioCtx.close();
+
+            return { lastFrameB64, lastAudioB64, wavUrl };
+        }
+
+        async function submitToBackend({ heightCm, weightKg, age, name, userId, collectTime, lastFrameB64, lastAudioWavB64 }) {
+            const csrftokenInput = document.querySelector("input[name=csrfmiddlewaretoken]");
+            const csrftoken = csrftokenInput ? csrftokenInput.value : "";
+
+            const fd = new FormData();
+            fd.append("height_cm", String(heightCm));
+            fd.append("weight_kg", String(weightKg));
+            fd.append("age", String(age));
+            fd.append("name", String(name));
+            fd.append("user_id", String(userId));
+            fd.append("collect_time", String(collectTime));
+            fd.append("last_frame_image_b64", lastFrameB64);
+            fd.append("last_audio_wav_b64", lastAudioWavB64);
+
+            setStatus("正在提交到后端，请稍等...");
+
+            const resp = await fetch("/srga/submit/", {
+                method: "POST",
+                headers: { "X-CSRFToken": csrftoken },
+                body: fd,
+                credentials: "same-origin"
+            });
+
+            if (!resp.ok) {
+                const text = await resp.text();
+                throw new Error("提交失败：" + text);
+            }
+            return await resp.json();
+        }
+
+        async function handleStop() {
+            if (!recordedChunks.length) {
+                setStatus("未录制到音视频数据。");
+                return;
+            }
+
+            btnStop.disabled = true;
+            btnStart.disabled = true;
+            btnReset.disabled = false;
+            setExtracting("正在截取最后一帧图像与最后音频...");
+            serverResult.classList.add("hidden");
+
+            const videoBlob = new Blob(recordedChunks, { type: currentMimeType || "video/webm" });
+            recordedChunks = [];
+
+            const audioSliceSeconds = Number(audioSliceSecondsInput.value);
+
+            if (!Number.isFinite(audioSliceSeconds) || audioSliceSeconds <= 0) {
+                throw new Error("请输入有效的最后音频长度（秒）。");
+            }
+
+            const { lastFrameB64, lastAudioB64, wavUrl } =
+                await extractLastFrameAndAudio(videoBlob, audioSliceSeconds);
+
+            // 展示预览
+            const jpegUrl = "data:image/jpeg;base64," + lastFrameB64;
+            lastFramePreview.src = jpegUrl;
+            lastFramePreview.classList.remove("hidden");
+
+            lastAudioPreview.src = wavUrl;
+            audioPreviewWrap.classList.remove("hidden");
+
+            hideExtracting();
+            extractedLastFrameB64 = lastFrameB64;
+            extractedLastAudioWavB64 = lastAudioB64;
+            setStatus("已完成截取预览，点击页面底部“提交表单”进行上传。");
+            if (btnSubmit) btnSubmit.disabled = false;
+        }
+
+        async function startRecording() {
+            serverResult.classList.add("hidden");
+            showPreviewNone();
+            // 若用户尚未授权/初始化导致 mediaStream 为空，则在点击时补一次初始化
+            if (!mediaStream) {
+                await initCamera();
+            }
+            if (!mediaStream) {
+                throw new Error("摄像头初始化失败，无法开始录制。");
+            }
+            const stream = mediaStream;
+            const audioTracks = stream.getAudioTracks ? stream.getAudioTracks() : [];
+            if (!audioTracks || audioTracks.length === 0) {
+                throw new Error("未检测到麦克风音轨，已阻止录制。请接入/启用麦克风并允许权限后重试。");
+            }
+
+            recordedChunks = [];
+            currentMimeType = pickSupportedMimeType();
+
+            // MediaRecorder 同步录制视频+音频，后续再从视频Blob中提取最后音频段
+            mediaRecorder = new MediaRecorder(stream, currentMimeType ? { mimeType: currentMimeType } : undefined);
+            mediaRecorder.ondataavailable = (e) => {
+                if (e.data && e.data.size > 0) recordedChunks.push(e.data);
+            };
+            mediaRecorder.onerror = () => {
+                setStatus("录制过程中出现错误，请重新开始。");
+            };
+            mediaRecorder.onstop = async () => {
+                try {
+                    await handleStop();
+                } catch (err) {
+                    setStatus("处理失败：" + (err && err.message ? err.message : String(err)));
+                    console.error(err);
+                } finally {
+                    mediaRecorder = null;
+                    btnStart.disabled = false;
+                    btnStop.disabled = true;
+                    btnReset.disabled = false;
+                }
+            };
+
+            mediaRecorder.start();
+            btnStart.disabled = true;
+            btnStop.disabled = false;
+            btnReset.disabled = true;
+            setExtracting("录制中... 请在合适时点击停止。");
+        }
+
+        function resetAll() {
+            try {
+                if (mediaRecorder && mediaRecorder.state !== "inactive") mediaRecorder.stop();
+            } catch (_) {}
+            mediaRecorder = null;
+            recordedChunks = [];
+            stopMicViz();
+            showPreviewNone();
+            btnStart.disabled = false;
+            btnStop.disabled = true;
+            btnReset.disabled = true;
+            if (btnSubmit) btnSubmit.disabled = true;
+        }
+
+        btnStart.addEventListener("click", async () => {
+            try {
+                await startRecording();
+            } catch (e) {
+                setStatus("打开摄像头失败：" + (e && e.message ? e.message : String(e)));
+                console.error(e);
+            }
+        });
+
+        btnStop.addEventListener("click", async () => {
+            if (mediaRecorder && mediaRecorder.state !== "inactive") {
+                btnStop.disabled = true;
+                mediaRecorder.stop();
+            }
+        });
+
+        btnReset.addEventListener("click", resetAll);
+
+        if (btnSubmit) {
+            btnSubmit.addEventListener("click", async (e) => {
+                e.preventDefault();
+                try {
+                    const heightCm = Number(heightInput.value);
+                    const weightKg = Number(weightInput.value);
+                    const age = (ageInput && ageInput.value !== "") ? Number(ageInput.value) : 0;
+                    const name = (nameInput.value || "").trim();
+                    const userId = (userIdInput.value || "").trim();
+                    const collectTime = (collectTimeInput && collectTimeInput.value) ? collectTimeInput.value : "";
+
+                    if (!extractedLastFrameB64 || !extractedLastAudioWavB64) {
+                        throw new Error("请先停止录制完成截取预览后再提交。");
+                    }
+                    if (!Number.isFinite(heightCm) || heightCm <= 0) throw new Error("请输入有效的身高 height(cm)。");
+                    if (!Number.isFinite(weightKg) || weightKg <= 0) throw new Error("请输入有效的体重 weight(kg)。");
+                    if (!Number.isFinite(age) || age < 0) throw new Error("请输入有效的年龄 age（可不填，默认 0）。");
+                    if (!name) throw new Error("请输入姓名。");
+                    if (!userId) throw new Error("请输入用户编号 user_id。");
+                    if (!collectTime) throw new Error("采集时间不能为空。");
+
+                    btnSubmit.disabled = true;
+                    const result = await submitToBackend({
+                        heightCm,
+                        weightKg,
+                        age,
+                        name,
+                        userId,
+                        collectTime,
+                        lastFrameB64: extractedLastFrameB64,
+                        lastAudioWavB64: extractedLastAudioWavB64
+                    });
+                    const msg = result && result.message ? result.message : "已成功提交。";
+                    setStatus(msg, true);
+                    if (result && result.result_url) {
+                        window.location.href = result.result_url;
+                    }
+                } catch (err) {
+                    setStatus("提交失败：" + (err && err.message ? err.message : String(err)));
+                    if (btnSubmit && extractedLastFrameB64 && extractedLastAudioWavB64) btnSubmit.disabled = false;
+                    console.error(err);
+                }
+            });
+        }
+
+        // 初始状态
+        showPreviewNone();
+        // 页面打开先重置后端 temp（清空 tabular.csv / images / audios）
+        (async () => {
+            try {
+                const resp = await fetch("/srga/reset-temp/", {
+                    method: "GET",
+                    credentials: "same-origin",
+                    cache: "no-store"
+                });
+                if (resp.ok) {
+                    const data = await resp.json();
+                    if (data && data.message) setStatus(data.message, true);
+                } else {
+                    // 不阻断页面使用：仅提示，不抛错
+                    const text = await resp.text();
+                    setStatus("重置临时目录失败（不影响录制，但可能残留旧数据）：" + text, true);
+                }
+            } catch (e) {
+                setStatus("重置临时目录失败（不影响录制，但可能残留旧数据）：" + (e && e.message ? e.message : String(e)), true);
+            } finally {
+                initCamera();
+            }
+        })();
+    </script>
+</body>
+</html>
+

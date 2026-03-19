@@ -1,0 +1,5 @@
+Django==4.2.17
+pymysql>=1.1.0
+python-dotenv>=1.0.0
+pillow>=11.0.0
+pyyaml>=6.0.0

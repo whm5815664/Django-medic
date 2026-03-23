@@ -416,6 +416,10 @@
             cursor: pointer;
             font-size: 11px;
             white-space: nowrap;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+            box-sizing: border-box;
         }
 
         .action-btn.view {
@@ -484,7 +488,7 @@
                         <div class="stat-header">
                             <div>
                                 <div class="stat-label">建档人数</div>
-                                <div class="stat-value">-</div>
+                                <div class="stat-value">{{ dashboard_stats.user_count }}</div>
                             </div>
                             <div class="stat-icon">👥</div>
                         </div>
@@ -578,56 +582,29 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr data-name="张三" data-updated-at="2026-03-15 15:51:09" data-health-status="正常">
-                        <td>1</td>
-                        <td>张三</td>
-                        <td>35</td>
-                        <td>175</td>
-                        <td>70</td>
-                        <td>22.86</td>
-                        <td>正常</td>
-                        <td>2026-03-15 15:51:09</td>
+                    {% for row in dashboard_rows %}
+                    <tr data-name="{{ row.userName }}" data-updated-at="{{ row.updated_at_attr }}" data-health-status="{{ row.health_status }}">
+                        <td>{{ row.pk }}</td>
+                        <td>{{ row.userName }}</td>
+                        <td>{% if row.age is not None %}{{ row.age }}{% else %}-{% endif %}</td>
+                        <td>{% if row.height is not None %}{{ row.height|floatformat:2 }}{% else %}-{% endif %}</td>
+                        <td>{% if row.weight is not None %}{{ row.weight|floatformat:2 }}{% else %}-{% endif %}</td>
+                        <td>{% if row.bmi is not None %}{{ row.bmi|floatformat:2 }}{% else %}-{% endif %}</td>
+                        <td>{% if row.health_status %}{{ row.health_status }}{% else %}-{% endif %}</td>
+                        <td>{% if row.assessment_date_display %}{{ row.assessment_date_display }}{% else %}-{% endif %}</td>
                         <td>
                             <div class="action-buttons">
-                                <button class="action-btn view">查看</button>
-                                <button class="action-btn evaluate">评估</button>
-                                <button class="action-btn analyze">分析</button>
+                                <button type="button" class="action-btn view">查看</button>
+                                <a class="action-btn evaluate" href="{% url 'srga_record_form' %}?user_id={{ row.userID|urlencode }}&name={{ row.userName|urlencode }}">评估</a>
+                                <button type="button" class="action-btn analyze">分析</button>
                             </div>
                         </td>
                     </tr>
-                    <tr data-name="李四" data-updated-at="2026-03-15 14:30:22" data-health-status="正常">
-                        <td>2</td>
-                        <td>李四</td>
-                        <td>28</td>
-                        <td>168</td>
-                        <td>65</td>
-                        <td>23.03</td>
-                        <td>正常</td>
-                        <td>2026-03-15 14:30:22</td>
-                        <td>
-                            <div class="action-buttons">
-                                <button class="action-btn view">查看</button>
-                                <button class="action-btn evaluate">评估</button>
-                                <button class="action-btn analyze">分析</button>
-                            </div>
-                        </td>
+                    {% empty %}
+                    <tr>
+                        <td colspan="9" style="text-align: center; color: #7f8c8d; padding: 24px;">暂无人员数据</td>
                     </tr>
-                    <tr data-name="王五" data-updated-at="2026-03-15 13:20:15" data-health-status="偏重">
-                        <td>3</td>
-                        <td>王五</td>
-                        <td>42</td>
-                        <td>180</td>
-                        <td>85</td>
-                        <td>26.23</td>
-                        <td>偏重</td>
-                        <td>2026-03-15 13:20:15</td>
-                        <td>
-                            <div class="action-buttons">
-                                <button class="action-btn view">查看</button>
-                                <button class="action-btn evaluate">评估</button>
-                                <button class="action-btn analyze">分析</button>
-                            </div>
-                    </tr>
+                    {% endfor %}
                 </tbody>
             </table>
         </div>

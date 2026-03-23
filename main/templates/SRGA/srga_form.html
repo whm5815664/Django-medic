@@ -252,6 +252,15 @@
             collectTimeInput.value = toLocalDateTimeValue(new Date());
         }
 
+        // 从 URL ?user_id=&name= 预填（如从仪表板「评估」进入）
+        (function fillFromQuery() {
+            const params = new URLSearchParams(window.location.search);
+            const uid = params.get("user_id");
+            const nm = params.get("name");
+            if (uid && userIdInput) userIdInput.value = uid;
+            if (nm && nameInput) nameInput.value = nm;
+        })();
+
         let mediaStream = null;
         let mediaRecorder = null;
         let recordedChunks = [];

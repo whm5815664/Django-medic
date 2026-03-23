@@ -92,11 +92,11 @@ WSGI_APPLICATION = "config.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.mysql",  # 数据库引擎
-        "NAME": os.environ.get("DB_NAME", "web_database"),  # 数据库名称
-        "HOST": os.environ.get("DB_HOST", "127.0.0.1"),  # 数据库地址，本机 ip 地址 127.0.0.1
-        "PORT": int(os.environ.get("DB_PORT", "3306")),  # 端口
-        "USER": os.environ.get("DB_USER", "root"),  # 数据库用户名
-        "PASSWORD": os.environ.get("DB_PASSWORD", ""),  # 数据库密码
+        "NAME": "web_medic",  # 数据库名称
+        "HOST": "127.0.0.1",  # 数据库地址，本机 ip 地址 127.0.0.1
+        "PORT": 3306,  # 端口
+        "USER": "root",  # 数据库用户名
+        "PASSWORD": "",  # 数据库密码
         "OPTIONS": {
             "charset": "utf8mb4",
         },
@@ -132,7 +132,9 @@ TIME_ZONE = "Asia/Shanghai"
 
 USE_I18N = True
 
-USE_TZ = True
+# MySQL 多为本地 naive 时间；若为 True，部分 DateField/DateTimeField 与库类型不一致时会触发
+# "'datetime.date' object has no attribute 'utcoffset'"。需跨时区 API 时再改回 True。
+USE_TZ = False
 
 
 # Static files (CSS, JavaScript, Images)

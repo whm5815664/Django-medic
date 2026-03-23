@@ -1,12 +1,21 @@
 from django.shortcuts import render
 from django.conf import settings
 
+from main.data.dashboard import build_dashboard_rows
 from main.SRGA.SRGA_form import srga_submit
 from main.SRGA.SRGA_form import srga_reset_temp
 
 def dashboard(request):
     """仪表板页面视图"""
-    return render(request, "main/dashboard.html")
+    dashboard_rows, dashboard_stats = build_dashboard_rows()
+    return render(
+        request,
+        "main/dashboard.html",
+        {
+            "dashboard_rows": dashboard_rows,
+            "dashboard_stats": dashboard_stats,
+        },
+    )
 
 
 def srga_record_form(request):

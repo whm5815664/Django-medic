@@ -4,6 +4,7 @@ from main import views
 
 urlpatterns = [
     path("", views.dashboard, name="dashboard"),
+    path("api/users/add/", views.add_user_api, name="add_user_api"),
     path("srga/record/", views.srga_record_form, name="srga_record_form"),
     path("srga/reset-temp/", views.srga_reset_temp, name="srga_reset_temp"),
     path("srga/submit/", views.srga_submit, name="srga_submit"),

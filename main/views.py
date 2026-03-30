@@ -1,7 +1,9 @@
 from django.shortcuts import render
 from django.conf import settings
+from django.http import JsonResponse
 
 from main.data.dashboard import build_dashboard_rows
+from main.data.addUser import add_user_from_request
 from main.SRGA.SRGA_form import srga_submit
 from main.SRGA.SRGA_form import srga_reset_temp
 
@@ -16,6 +18,13 @@ def dashboard(request):
             "dashboard_stats": dashboard_stats,
         },
     )
+
+def add_user_api(request):
+    try:
+        payload = add_user_from_request(request)
+        return JsonResponse({"ok": True, "data": payload})
+    except Exception as e:
+        return JsonResponse({"ok": False, "error": str(e)}, status=400)
 
 
 def srga_record_form(request):

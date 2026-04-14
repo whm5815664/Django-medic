@@ -2,11 +2,22 @@ from django.shortcuts import render
 from django.conf import settings
 from django.http import JsonResponse
 
+import os
+import json
+import base64
+import numpy as np
+import cv2
+from django.shortcuts import render
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from deepface import DeepFace
+
+
 from main.data.dashboard import build_dashboard_rows
 from main.data.addUser import add_user_from_request
 from main.SRGA.SRGA_form import srga_submit
 from main.SRGA.SRGA_form import srga_reset_temp
-
+from django.views.decorators.csrf import csrf_exempt
 def dashboard(request):
     """仪表板页面视图"""
     dashboard_rows, dashboard_stats = build_dashboard_rows()
@@ -29,7 +40,16 @@ def add_user_api(request):
 
 def srga_record_form(request):
     """SRGA 健康评估：身高/体重 + 摄像头采集表单页"""
-    return render(request, "SRGA/srga_form.html")
+    #return render(request, "SRGA/srga_form.html")
+    user_id = request.GET.get("user_id", "")
+    name = request.GET.get("name", "")
+    age = request.GET.get("age", "")
+
+    return render(request, "SRGA/srga_phone.html", {
+        "user_id": user_id,
+        "name": name,
+        "age": age,
+    })
 
 
 def srga_result(request):
@@ -88,3 +108,31 @@ def srga_result(request):
 
     return render(request, "SRGA/srga_result.html", context)
 
+
+
+import traceback
+
+from django.http import JsonResponse
+from django.shortcuts import render
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
+
+from .services.assessment_service import analyze_and_save_assessment
+
+
+
+def index(request):
+    return render(request, 'index.html')
+
+
+@csrf_exempt
+@require_POST
+def analyze(request):
+    try:
+        result = analyze_and_save_assessment(request.body)
+        return JsonResponse(result)
+    except ValueError as e:
+        return JsonResponse({"success": False, "error": str(e)}, status=400)
+    except Exception as e:
+        traceback.print_exc()
+        return JsonResponse({"success": False, "error": str(e)}, status=500)

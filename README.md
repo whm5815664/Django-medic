@@ -20,3 +20,24 @@
   - `SRGA/`：SRGA 模块（表单、推理逻辑、模型/数据处理代码与配置）
 - `scripts/`：常用 PowerShell 脚本（如迁移、运行、环境准备）
 - `requirements.txt`：Python 依赖（根目录与 `main/SRGA/` 下可能分别维护）
+
+运行命令汇总
+```bash
+# 创建虚拟环境
+python -m venv venv
+
+# 激活虚拟环境（Windows）
+venv\Scripts\activate
+
+# 安装依赖
+pip install -r requirements.txt
+
+# 生成迁移
+python manage.py makemigrations
+
+# 执行迁移
+python manage.py migrate
+
+# 启动服务
+python manage.py runserver_plus --cert-file cert
+```

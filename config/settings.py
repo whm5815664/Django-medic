@@ -37,9 +37,7 @@ SECRET_KEY = os.environ.get(
 DEBUG = os.environ.get("DJANGO_DEBUG", "1").lower() in {"1", "true", "yes", "on"}
 
 ALLOWED_HOSTS = [
-    h.strip()
-    for h in os.environ.get("DJANGO_ALLOWED_HOSTS", "").split(",")
-    if h.strip()
+    "*"
 ]
 
 
@@ -53,6 +51,8 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "main",
+    "django_extensions",#django-extensions 的 runserver_plus
+    'sslserver',        # HTTPS 插件
 ]
 
 MIDDLEWARE = [
@@ -96,7 +96,7 @@ DATABASES = {
         "HOST": "127.0.0.1",  # 数据库地址，本机 ip 地址 127.0.0.1
         "PORT": 3306,  # 端口
         "USER": "root",  # 数据库用户名
-        "PASSWORD": "",  # 数据库密码
+        "PASSWORD": "123456",  # 数据库密码
         "OPTIONS": {
             "charset": "utf8mb4",
         },
@@ -146,3 +146,5 @@ STATIC_URL = "static/"
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+# 关闭CSRF（方便前端调用接口）
+CSRF_TRUSTED_ORIGINS = ["https://127.0.0.1", "https://localhost"]

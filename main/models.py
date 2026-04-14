@@ -15,12 +15,27 @@ class User(models.Model):
         managed = False
 
 
+
+
 class Assessment(models.Model):
     userID = models.CharField(max_length=64, db_index=True, verbose_name="用户ID")
-    assessment_date = models.DateField(verbose_name="评估日期")
+    assessment_date = models.DateTimeField(verbose_name="评估时间")
     height = models.FloatField(verbose_name="身高(cm)")
     weight = models.FloatField(verbose_name="体重(kg)")
     bmi = models.FloatField(verbose_name="BMI")
+    blood_pressure = models.CharField(
+        max_length=20,
+        null=True,
+        blank=True,
+        verbose_name="血压"
+    )
+    blood_sugar = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name="血糖"
+    )
     health_status = models.CharField(max_length=20, verbose_name="健康状况")
 
     class Meta:

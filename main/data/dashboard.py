@@ -1,7 +1,7 @@
 """
 仪表板数据：User.userID 与 Assessment.userID 对应，
-按 assessment_date 取最新一条的 height、weight、bmi、health_status。
-使用 ORM：先查 User，再按 userID 批量查 Assessment，内存合并（避免 Subquery 日期注解在 USE_TZ 下触发 utcoffset 问题）。
+按 assessment_date 取最新一条的 height、weight、bmi、blood_pressure、blood_sugar、health_status。
+使用 ORM：先查 User，再按 userID 批量查 Assessment，内存合并。
 """
 
 from __future__ import annotations
@@ -10,6 +10,16 @@ from datetime import date, datetime
 from typing import Any
 
 from main.models import Assessment, User
+
+
+def _normalize_to_datetime(value: date | datetime | None) -> datetime | None:
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        return value
+    if isinstance(value, date):
+        return datetime.combine(value, datetime.min.time())
+    return None
 
 
 def _normalize_to_date(value: date | datetime | None) -> date | None:
@@ -47,7 +57,7 @@ def _fetch_users_for_dashboard() -> list[tuple[Any, ...]]:
 def _latest_assessment_by_user_id(user_ids: list[str]) -> dict[str, dict[str, Any]]:
     """
     Assessment ORM：按 userID + assessment_date 倒序，每个 userID 取第一条。
-    表无 id 列，不按 id 排序；同日多条时任选一条。
+    如果 assessment_date 已改为 DateTimeField，这里会按最新时分秒取最新记录。
     """
     if not user_ids:
         return {}
@@ -55,7 +65,16 @@ def _latest_assessment_by_user_id(user_ids: list[str]) -> dict[str, dict[str, An
     qs = (
         Assessment.objects.filter(userID__in=user_ids)
         .order_by("userID", "-assessment_date")
-        .values("userID", "height", "weight", "bmi", "health_status", "assessment_date")
+        .values(
+            "userID",
+            "height",
+            "weight",
+            "bmi",
+            "blood_pressure",
+            "blood_sugar",
+            "health_status",
+            "assessment_date",
+        )
     )
 
     out: dict[str, dict[str, Any]] = {}
@@ -70,7 +89,7 @@ def build_dashboard_rows() -> tuple[list[dict[str, Any]], dict[str, Any]]:
     """
     查询全部 User（created_at 倒序）；
     对每个 userID 匹配 Assessment.userID，取 assessment_date 最新一条的
-    height、weight、bmi、health_status。
+    height、weight、bmi、blood_pressure、blood_sugar、health_status。
     """
     user_rows = _fetch_users_for_dashboard()
     user_ids = [str(r[0]) for r in user_rows]
@@ -80,8 +99,8 @@ def build_dashboard_rows() -> tuple[list[dict[str, Any]], dict[str, Any]]:
     for uid, name, birth, _tel in user_rows:
         uid_s = str(uid)
         latest = latest_map.get(uid_s)
-        ad = _normalize_to_date(latest["assessment_date"] if latest else None)
-        updated_attr = f"{ad.isoformat()} 00:00:00" if ad else ""
+
+        assessment_dt = _normalize_to_datetime(latest["assessment_date"] if latest else None)
         hs = (latest["health_status"] if latest else None) or ""
 
         rows.append(
@@ -93,9 +112,11 @@ def build_dashboard_rows() -> tuple[list[dict[str, Any]], dict[str, Any]]:
                 "height": latest["height"] if latest else None,
                 "weight": latest["weight"] if latest else None,
                 "bmi": latest["bmi"] if latest else None,
+                "blood_pressure": latest["blood_pressure"] if latest else None,
+                "blood_sugar": latest["blood_sugar"] if latest else None,
                 "health_status": hs,
-                "assessment_date_display": ad.strftime("%Y-%m-%d") if ad else None,
-                "updated_at_attr": updated_attr,
+                "assessment_date_display": assessment_dt.strftime("%Y-%m-%d %H:%M:%S") if assessment_dt else None,
+                "updated_at_attr": assessment_dt.strftime("%Y-%m-%d %H:%M:%S") if assessment_dt else "",
             }
         )
 

@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>情绪健康评估系统</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        :root {
+            --bg: #1a1a1a;
+            --panel: #222;
+            --panel-border: #333;
+            --input-bg: #111;
+            --input-border: #444;
+            --text-main: #fff;
+            --text-sub: #ccc;
+            --text-muted: #999;
+            --text-status: #888;
+            --primary: #007AFF;
+            --primary-active: #0056b3;
+            --secondary: #28a745;
+            --secondary-active: #1f7f34;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background:
+                radial-gradient(circle at top, #262626 0%, #1a1a1a 35%, #141414 100%);
+            color: white;
+            min-height: 100vh;
+            margin: 0;
+            overflow-x: hidden;
+            padding: 24px 16px 40px;
+        }
+
+        .page-shell {
+            width: 100%;
+            max-width: 1320px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            margin: 0 0 20px;
+            font-size: 1.5rem;
+            color: #ddd;
+            text-align: center;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+
+        .main-layout {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            align-items: stretch;
+        }
+
+        .camera-panel,
+        .side-panel {
+            background: rgba(34, 34, 34, 0.9);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 18px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.28);
+            backdrop-filter: blur(4px);
+        }
+
+        .camera-panel {
+            padding: 18px;
+        }
+
+        .side-panel {
+            padding: 18px;
+        }
+
+        .panel-title {
+            font-size: 0.98rem;
+            color: #d5d5d5;
+            margin-bottom: 14px;
+            text-align: left;
+        }
+
+        .camera-container {
+            position: relative;
+            width: 100%;
+            max-width: 100%;
+            aspect-ratio: 3/4;
+            background: #000;
+            border-radius: 14px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            z-index: 1;
+        }
+
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1);
+            display: block;
+        }
+
+        .scan-line {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: #00FF00;
+            box-shadow: 0 0 15px #00FF00;
+            z-index: 999;
+            display: none;
+            animation: scanAnimation 2s linear infinite;
+        }
+
+        @keyframes scanAnimation {
+            0% { top: 0%; opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { top: 100%; opacity: 0; }
+        }
+
+        .controls {
+            margin-top: 0;
+            text-align: center;
+            width: 100%;
+            max-width: none;
+        }
+
+        .form-card {
+            background: var(--panel);
+            border: 1px solid var(--panel-border);
+            border-radius: 14px;
+            padding: 16px;
+            margin-bottom: 15px;
+        }
+
+        .form-title {
+            font-size: 0.98rem;
+            color: var(--text-sub);
+            margin-bottom: 12px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        .input-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            text-align: left;
+        }
+
+        .input-group label {
+            font-size: 0.88rem;
+            color: #aaa;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 11px 12px;
+            border: 1px solid var(--input-border);
+            border-radius: 10px;
+            background: var(--input-bg);
+            color: #fff;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .input-group input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.16);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 15px;
+            font-size: 1.05rem;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            color: white;
+            font-weight: bold;
+            margin-top: 10px;
+            transition: transform 0.15s ease, opacity 0.2s ease, background 0.2s ease;
+        }
+
+        .btn:hover:not(:disabled) {
+            transform: translateY(-1px);
+        }
+
+        .primary-btn {
+            background: var(--primary);
+        }
+
+        .primary-btn:active {
+            background: var(--primary-active);
+        }
+
+        .secondary-btn {
+            background: var(--secondary);
+        }
+
+        .secondary-btn:active {
+            background: var(--secondary-active);
+        }
+
+        .btn:disabled {
+            background: #555;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        #status, #audioStatus {
+            margin-top: 12px;
+            font-size: 0.92rem;
+            color: var(--text-status);
+            text-align: left;
+            line-height: 1.5;
+        }
+
+        .audio-tip {
+            margin-top: 8px;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            text-align: left;
+            line-height: 1.6;
+            background: #1a1a1a;
+            border: 1px solid #2d2d2d;
+            border-radius: 12px;
+            padding: 10px 12px;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.9);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            backdrop-filter: blur(5px);
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .modal-content {
+            background: #222;
+            border-radius: 16px;
+            width: 100%;
+            max-width: 460px;
+            text-align: center;
+            border: 1px solid #444;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            max-height: calc(100vh - 40px);
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.45);
+        }
+
+        .modal-body {
+            padding: 18px 18px 10px;
+            overflow-y: auto;
+        }
+
+        .result-img {
+            width: 100%;
+            max-height: 360px;
+            object-fit: cover;
+            border-radius: 10px;
+            border: 2px solid #555;
+            display: block;
+        }
+
+        .result-info {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            align-items: center;
+            margin-top: 14px;
+        }
+
+        .result-title {
+            font-size: 1.2rem;
+            margin: 0;
+            color: #fff;
+        }
+
+        .result-emotion {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin: 0;
+        }
+
+        .result-status {
+            font-size: 1rem;
+            padding: 5px 15px;
+            border-radius: 20px;
+            color: white;
+        }
+
+        .result-extra {
+            font-size: 0.9rem;
+            color: #bbb;
+            line-height: 1.7;
+            background: #181818;
+            border: 1px solid #333;
+            border-radius: 10px;
+            padding: 10px;
+            margin-top: 12px;
+            text-align: left;
+        }
+
+        .modal-footer {
+            padding: 14px 18px 18px;
+            border-top: 1px solid #333;
+            background: #222;
+            position: sticky;
+            bottom: 0;
+        }
+
+        .footer-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .modal-btn {
+            padding: 13px 12px;
+            border-radius: 10px;
+            border: none;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+        }
+
+        .retry-btn {
+            background: #007AFF;
+            color: #fff;
+        }
+
+        .retry-btn:active {
+            background: #0056b3;
+        }
+
+        .close-btn {
+            background: #333;
+            color: #fff;
+            border: 1px solid #555;
+        }
+
+        .close-btn:active {
+            background: #444;
+        }
+
+        #captureCanvas {
+            display: none;
+        }
+
+        /* 平板 */
+        @media (min-width: 768px) {
+            body {
+                padding: 28px 24px 48px;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+                margin-bottom: 24px;
+            }
+
+            .camera-container {
+                aspect-ratio: 4/3;
+            }
+
+            .input-grid {
+                gap: 12px;
+            }
+
+            .modal-content {
+                max-width: 520px;
+            }
+        }
+
+        /* 电脑端 */
+        @media (min-width: 1024px) {
+            body {
+                padding: 32px 28px 56px;
+            }
+
+            .main-layout {
+                display: grid;
+                grid-template-columns: minmax(620px, 1.2fr) minmax(380px, 0.8fr);
+                gap: 24px;
+                align-items: start;
+            }
+
+            .camera-panel {
+                padding: 22px;
+                position: sticky;
+                top: 24px;
+            }
+
+            .side-panel {
+                padding: 22px;
+            }
+
+            .camera-container {
+                aspect-ratio: 16/10;
+                min-height: 520px;
+            }
+
+            .controls {
+                width: 100%;
+                max-width: none;
+            }
+
+            .btn {
+                font-size: 1rem;
+            }
+
+            #status, #audioStatus {
+                font-size: 0.94rem;
+            }
+        }
+
+        /* 超宽屏 */
+        @media (min-width: 1440px) {
+            .page-shell {
+                max-width: 1440px;
+            }
+
+            .main-layout {
+                grid-template-columns: minmax(760px, 1.25fr) minmax(420px, 0.75fr);
+            }
+
+            .camera-container {
+                min-height: 620px;
+            }
+        }
+
+        /* 手机端 */
+        @media (max-width: 640px) {
+            body {
+                padding: 20px 12px 36px;
+            }
+
+            h1 {
+                margin: 8px 0 16px;
+                font-size: 1.2rem;
+            }
+
+            .camera-panel,
+            .side-panel {
+                padding: 14px;
+                border-radius: 14px;
+            }
+
+            .camera-container {
+                aspect-ratio: 3/4;
+                border-radius: 12px;
+            }
+
+            .input-grid {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+
+            .modal-content {
+                max-width: 360px;
+            }
+        }
+        .back-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 10px 16px;
+            margin-bottom: 16px;
+            border: 1px solid #444;
+            border-radius: 10px;
+            background: #2a2a2a;
+            color: #fff;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s ease, transform 0.15s ease;
+        }
+
+        .back-btn:hover {
+            background: #353535;
+            transform: translateY(-1px);
+        }
+
+        .back-btn:active {
+            background: #404040;
+        }
+
+        @media (max-width: 640px) {
+            .back-btn {
+                width: 100%;
+                margin-bottom: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="page-shell">
+<button class="back-btn" onclick="window.location.href='/'">返回</button>
+        <h1>情绪健康评估系统</h1>
+
+        <div class="main-layout">
+            <div class="camera-panel">
+                <div class="panel-title">摄像头画面</div>
+                <div class="camera-container">
+                    <video id="video" autoplay playsinline muted></video>
+                    <div id="scanLine" class="scan-line"></div>
+                </div>
+            </div>
+
+            <div class="side-panel">
+                <div class="controls">
+                    <div class="form-card">
+                        <div class="form-title">基础信息</div>
+                        <div class="input-grid">
+                            <div class="input-group">
+                                <label for="userIdInput">用户ID</label>
+                                <input
+                                    id="userIdInput"
+                                    type="text"
+                                    placeholder="请输入用户ID"
+                                    value="{{ user_id|default:'' }}"
+                                >
+                            </div>
+
+                            <div class="input-group">
+                                <label for="userNameInput">用户名字</label>
+                                <input
+                                    id="userNameInput"
+                                    type="text"
+                                    placeholder="请输入姓名"
+                                    value="{{ name|default:'' }}"
+                                >
+                            </div>
+
+                            <div class="input-group">
+                                <label for="ageInput">年龄</label>
+                                <input id="ageInput" type="number" min="1" max="120" placeholder="岁"value="{{ age|default:'' }}">
+                            </div>
+
+                            <div class="input-group">
+                                <label for="heightInput">身高</label>
+                                <input id="heightInput" type="number" min="50" max="250" placeholder="cm">
+                            </div>
+
+                            <div class="input-group">
+                                <label for="weightInput">体重</label>
+                                <input id="weightInput" type="number" min="10" max="300" step="0.1" placeholder="kg">
+                            </div>
+
+                            <div class="input-group">
+                                <label for="bloodPressureInput">血压</label>
+                                <input id="bloodPressureInput" type="text" placeholder="如 120/80">
+                            </div>
+
+                            <div class="input-group">
+                                <label for="bloodSugarInput">餐后血糖</label>
+                                <input id="bloodSugarInput" type="number" min="0" max="99.99" step="0.01" placeholder="mmol/L">
+                            </div>
+                        </div>
+                    </div>
+
+                    <button id="recordBtn" class="btn secondary-btn">录制 5 秒辅助音频</button>
+                    <div id="audioStatus">尚未录制音频</div>
+                    <div class="audio-tip">建议在安静环境下录制，正常说一句话即可，例如：“我今天感觉还不错”。</div>
+
+                    <button id="captureBtn" class="btn primary-btn">开始评估</button>
+                    <div id="status">请对准人脸</div>
+                </div>
+            </div>
+        </div>
+
+        <canvas id="captureCanvas"></canvas>
+    </div>
+
+    <div id="resultModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-body">
+                <img id="resultImage" class="result-img" src="" alt="Result">
+
+                <div class="result-info">
+                    <div class="result-title">评估报告</div>
+                    <div id="resultEmotion" class="result-emotion">--</div>
+                    <div id="resultStatus" class="result-status">--</div>
+                </div>
+
+                <div id="resultExtra" class="result-extra">--</div>
+            </div>
+
+            <div class="modal-footer">
+                <div class="footer-actions">
+                    <button id="retryBtn" class="modal-btn retry-btn">重新评估</button>
+                    <button id="closeBtn" class="modal-btn close-btn">关闭</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('captureCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const captureBtn = document.getElementById('captureBtn');
+        const recordBtn = document.getElementById('recordBtn');
+        const retryBtn = document.getElementById('retryBtn');
+        const closeBtn = document.getElementById('closeBtn');
+
+        const statusDiv = document.getElementById('status');
+        const audioStatusDiv = document.getElementById('audioStatus');
+        const scanLine = document.getElementById('scanLine');
+
+        const ageInput = document.getElementById('ageInput');
+        const heightInput = document.getElementById('heightInput');
+        const weightInput = document.getElementById('weightInput');
+
+        const modal = document.getElementById('resultModal');
+        const resImg = document.getElementById('resultImage');
+        const resEmotion = document.getElementById('resultEmotion');
+        const resStatus = document.getElementById('resultStatus');
+        const resultExtra = document.getElementById('resultExtra');
+
+        let audioBlob = null;
+        let audioBase64 = '';
+        let isRecording = false;
+
+        let currentStream = null;
+
+        async function stopCurrentStream() {
+            if (currentStream) {
+                currentStream.getTracks().forEach(track => track.stop());
+                currentStream = null;
+            }
+            video.srcObject = null;
+        }
+
+        async function startPreferredCamera() {
+            try {
+                statusDiv.innerText = '正在初始化摄像头...';
+
+                // 先申请一次权限，这样才能拿到设备名称
+                const tempStream = await navigator.mediaDevices.getUserMedia({
+                    video: true,
+                    audio: false
+                });
+                tempStream.getTracks().forEach(track => track.stop());
+
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                const videoDevices = devices.filter(device => device.kind === 'videoinput');
+
+                console.log('视频设备列表:', videoDevices);
+
+                // 优先找 Orbbec RGB 摄像头
+                const preferredCamera = videoDevices.find(device =>
+                    device.label.includes('Orbbec Femto Bolt RGB Camera')
+                );
+
+                const constraints = preferredCamera
+                    ? {
+                        video: {
+                            deviceId: { exact: preferredCamera.deviceId },
+                            width: { ideal: 640 },
+                            height: { ideal: 480 }
+                        },
+                        audio: false
+                    }
+                    : {
+                        video: {
+                            width: { ideal: 640 },
+                            height: { ideal: 480 }
+                        },
+                        audio: false
+                    };
+
+                await stopCurrentStream();
+
+                const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                currentStream = stream;
+                video.srcObject = stream;
+                await video.play();
+
+                const track = stream.getVideoTracks()[0];
+                console.log('当前轨道信息:', track.getSettings());
+
+                statusDiv.innerText = preferredCamera
+                    ? 'Orbbec RGB 摄像头已就绪'
+                    : '默认摄像头已就绪';
+            } catch (err) {
+                console.error(err);
+                statusDiv.innerText = '无法访问摄像头: ' + err.message;
+            }
+        }
+
+        startPreferredCamera();
+
+        function getSupportedAudioMimeType() {
+            const mimeTypes = [
+                'audio/webm;codecs=opus',
+                'audio/webm',
+                'audio/mp4',
+                'audio/ogg;codecs=opus'
+            ];
+
+            for (const type of mimeTypes) {
+                if (window.MediaRecorder && MediaRecorder.isTypeSupported(type)) {
+                    return type;
+                }
+            }
+            return '';
+        }
+
+        function blobToBase64(blob) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+            });
+        }
+
+        async function recordAudioSegment(duration = 5000) {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                throw new Error('当前浏览器不支持录音');
+            }
+
+            if (!window.MediaRecorder) {
+                throw new Error('当前浏览器不支持 MediaRecorder');
+            }
+
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const chunks = [];
+            const mimeType = getSupportedAudioMimeType();
+            const options = mimeType ? { mimeType } : {};
+            const recorder = new MediaRecorder(stream, options);
+
+            return new Promise((resolve, reject) => {
+                recorder.ondataavailable = (e) => {
+                    if (e.data && e.data.size > 0) {
+                        chunks.push(e.data);
+                    }
+                };
+
+                recorder.onerror = (e) => {
+                    stream.getTracks().forEach(track => track.stop());
+                    reject(e.error || new Error('录音失败'));
+                };
+
+                recorder.onstop = () => {
+                    try {
+                        const finalBlob = new Blob(chunks, { type: recorder.mimeType || 'audio/webm' });
+                        stream.getTracks().forEach(track => track.stop());
+                        resolve(finalBlob);
+                    } catch (err) {
+                        reject(err);
+                    }
+                };
+
+                recorder.start();
+
+                setTimeout(() => {
+                    if (recorder.state !== 'inactive') {
+                        recorder.stop();
+                    }
+                }, duration);
+            });
+        }
+
+        function validateForm() {
+            const userId = document.getElementById('userIdInput').value.trim();
+            const age = ageInput.value.trim();
+            const height = heightInput.value.trim();
+            const weight = weightInput.value.trim();
+
+            if (!userId) {
+                alert('请先填写用户ID');
+                return false;
+            }
+
+            if (!age || !height || !weight) {
+                alert('请先填写年龄、身高、体重');
+                return false;
+            }
+
+            if (!video.videoWidth || !video.videoHeight) {
+                alert('摄像头尚未准备好');
+                return false;
+            }
+
+            //if (!audioBlob || !audioBase64) {
+            //    alert('请先录制 5 秒辅助音频');
+            //    return false;
+            //}
+
+
+            return true;
+        }
+
+        async function captureImage() {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            ctx.translate(canvas.width, 0);
+            ctx.scale(-1, 1);
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+
+            return canvas.toDataURL('image/jpeg', 0.9);
+        }
+
+        function resetUIState() {
+            scanLine.style.display = 'none';
+            modal.style.display = 'none';
+
+            captureBtn.disabled = false;
+            recordBtn.disabled = false;
+
+            captureBtn.innerText = "开始评估";
+            statusDiv.innerText = "准备就绪，请对准人脸";
+
+            video.play().catch(e => console.log("播放被拦截", e));
+        }
+
+        recordBtn.addEventListener('click', async () => {
+            if (isRecording) return;
+
+            try {
+                isRecording = true;
+                recordBtn.disabled = true;
+                captureBtn.disabled = true;
+
+                recordBtn.innerText = "录音中...";
+                audioStatusDiv.innerText = "正在录制 5 秒音频，请自然说话...";
+
+                const recordedBlob = await recordAudioSegment(5000);
+                const recordedBase64 = await blobToBase64(recordedBlob);
+
+                audioBlob = recordedBlob;
+                audioBase64 = recordedBase64;
+
+                audioStatusDiv.innerText = `音频录制完成（${Math.round(recordedBlob.size / 1024)} KB）`;
+                recordBtn.innerText = "重新录制辅助音频";
+            } catch (err) {
+                console.error(err);
+                audioBlob = null;
+                audioBase64 = '';
+                audioStatusDiv.innerText = "录音失败，请检查麦克风权限";
+                recordBtn.innerText = "录制 5 秒辅助音频";
+                alert(err.message || '录音失败');
+            } finally {
+                isRecording = false;
+                recordBtn.disabled = false;
+                captureBtn.disabled = false;
+            }
+        });
+
+        captureBtn.addEventListener('click', async () => {
+            if (!validateForm()) return;
+
+            try {
+                captureBtn.disabled = true;
+                recordBtn.disabled = true;
+                captureBtn.innerText = "分析中...";
+                statusDiv.innerText = "正在采集图像与音频并分析...";
+                scanLine.style.display = 'block';
+
+                const imageData = await captureImage();
+                const userIdInput = document.getElementById('userIdInput');
+                const userNameInput = document.getElementById('userNameInput');
+                const bloodPressureInput = document.getElementById('bloodPressureInput');
+                const bloodSugarInput = document.getElementById('bloodSugarInput');
+
+
+                const payload = {
+                    image: imageData,
+                        audio: audioBase64,
+                        audioMimeType: audioBlob?.type || 'audio/webm',
+                        userID: userIdInput.value.trim(),
+                        userName: userNameInput.value.trim(),
+                        bloodPressure: bloodPressureInput.value.trim(),
+                        bloodSugar: bloodSugarInput.value.trim(),
+                        profile: {
+                            age: Number(ageInput.value),
+                            height: Number(heightInput.value),
+                            weight: Number(weightInput.value)
+                        }
+                };
+
+                const response = await fetch('/analyze/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const rawText = await response.text();
+                console.log('HTTP状态码:', response.status);
+                console.log('后端原始响应:', rawText);
+
+                let data = null;
+                try {
+                    data = JSON.parse(rawText);
+                } catch (e) {
+                    throw new Error(`后端返回的不是JSON。HTTP ${response.status}。内容前300字符：${rawText.slice(0, 300)}`);
+                }
+
+                if (!response.ok) {
+                    throw new Error(data.error || `HTTP ${response.status}`);
+                }
+
+                if (!data.success) {
+                    throw new Error(data.error || '分析失败');
+                }
+
+                resImg.src = data.image || imageData;
+                resEmotion.innerText = (data.emotion || '--').toUpperCase();
+                resStatus.innerText = data.status || '--';
+
+                const bmi = (
+                    Number(weightInput.value) /
+                    Math.pow(Number(heightInput.value) / 100, 2)
+                ).toFixed(1);
+
+                resultExtra.innerHTML = `
+                    用户ID：${userIdInput.value || '--'}<br>
+                    用户名字：${userNameInput.value || '--'}<br>
+                    年龄：${ageInput.value} 岁<br>
+                    身高：${heightInput.value} cm<br>
+                    体重：${weightInput.value} kg<br>
+                    血压：${bloodPressureInput.value || '--'}<br>
+                    餐后血糖：${bloodSugarInput.value || '--'}<br>
+                    BMI：${data.bmi ?? bmi}<br>
+                    BMI分类：${data.bmi_category || '--'}<br>
+                    表情识别：${data.emotion || '--'}<br>
+                    判定原因：${data.reason || '--'}<br>
+                    音频辅助分析：已启用
+                `;
+
+                modal.style.display = 'flex';
+
+            } catch (err) {
+                console.error(err);
+                resetUIState();
+                alert("网络错误或服务器异常");
+            }
+        });
+
+        retryBtn.addEventListener('click', () => {
+            resetUIState();
+        });
+
+        closeBtn.addEventListener('click', () => {
+            resetUIState();
+        });
+
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                resetUIState();
+            }
+        });
+
+        startPreferredCamera();
+    </script>
+</body>
+</html>

@@ -15,6 +15,7 @@ from deepface import DeepFace
 
 from main.data.dashboard import build_dashboard_rows
 from main.data.addUser import add_user_from_request
+from main.data.userResults import build_user_results_context
 from main.SRGA.SRGA_form import srga_submit
 from main.SRGA.SRGA_form import srga_reset_temp
 from django.views.decorators.csrf import csrf_exempt
@@ -29,6 +30,12 @@ def dashboard(request):
             "dashboard_stats": dashboard_stats,
         },
     )
+
+
+def user_results(request):
+    page = int(request.GET.get("page", "1") or "1")
+    context = build_user_results_context(request.GET.get("user_id", ""), page=page, page_size=20)
+    return render(request, "userResults/useresults.html", context)
 
 def add_user_api(request):
     try:

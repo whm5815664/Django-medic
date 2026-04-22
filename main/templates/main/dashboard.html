@@ -724,7 +724,7 @@
                             <td>{% if row.assessment_date_display %}{{ row.assessment_date_display }}{% else %}-{% endif %}</td>
                             <td>
                                 <div class="action-buttons">
-                                    <button type="button" class="action-btn view">查看</button>
+                                    <a class="action-btn view" href="{% url 'user_results' %}?user_id={{ row.userID|urlencode }}">查看</a>
                                     <a class="action-btn evaluate" href="{% url 'srga_record_form' %}?user_id={{ row.userID|urlencode }}&name={{ row.userName|urlencode }}&age={{ row.age }}">评估</a>
                                     <button type="button" class="action-btn analyze">分析</button>
                                 </div>

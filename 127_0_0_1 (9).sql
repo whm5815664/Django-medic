@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- 主机： 127.0.0.1:3306
--- 生成日期： 2026-04-12 07:51:44
+-- 生成日期： 2026-04-23 01:06:29
 -- 服务器版本： 9.1.0
 -- PHP 版本： 8.3.14
 
@@ -32,19 +32,28 @@ USE `web_medic`;
 DROP TABLE IF EXISTS `assessments`;
 CREATE TABLE IF NOT EXISTS `assessments` (
   `userID` varchar(20) NOT NULL,
-  `assessment_date` date NOT NULL,
+  `assessment_date` datetime NOT NULL,
   `height` double NOT NULL,
   `weight` double NOT NULL,
   `bmi` double NOT NULL,
-  `health_status` varchar(10) NOT NULL
+  `health_status` varchar(10) NOT NULL,
+  `blood_pressure` varchar(20) NOT NULL,
+  `blood_sugar` double NOT NULL
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- 转存表中的数据 `assessments`
 --
 
-INSERT INTO `assessments` (`userID`, `assessment_date`, `height`, `weight`, `bmi`, `health_status`) VALUES
-('5201021999111111X', '2026-03-21', 172, 80, 22, '健康');
+INSERT INTO `assessments` (`userID`, `assessment_date`, `height`, `weight`, `bmi`, `health_status`, `blood_pressure`, `blood_sugar`) VALUES
+('5201021999111111X', '2026-03-21 00:00:00', 172, 80, 22, '健康', '', 0),
+('5201021999111111X', '2026-04-22 00:00:00', 160, 80, 31.25, '不健康', '120', 120),
+('5201021999111111X', '2026-04-22 00:00:00', 160, 80, 31.25, '不健康', '120', 50),
+('5201021999111111X', '2026-04-22 00:00:00', 160, 80, 31.25, '不健康', '120', 50),
+('5201021999111111X', '2026-04-22 00:00:00', 160, 80, 31.25, '不健康', '120', 50),
+('5201021999111111X', '2026-04-22 11:12:07', 12, 60, 4166.67, '不健康', '100', 23),
+('5201021999111111X', '2026-04-22 11:12:28', 12, 60, 4166.67, '不健康', '100', 23),
+('5201021999111111X', '2026-04-22 15:05:10', 170, 52, 17.99, '不健康', '90', 120);
 
 -- --------------------------------------------------------
 

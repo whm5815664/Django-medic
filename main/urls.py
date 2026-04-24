@@ -18,6 +18,7 @@ urlpatterns = [
 
     # 评估记录页面
     path("user-results/", views.user_results, name="user_results"),
+    path("user-results/delete/", views.user_result_delete, name="user_result_delete"),
     
 ]
 

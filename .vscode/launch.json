@@ -16,6 +16,21 @@
             "env": {                            // 环境变量配置对象
                 "PYTHONUNBUFFERED": "1"         // 设置Python输出不缓冲，确保日志实时显示
             }
+        },
+        {
+            "name": "Python Debugger: Django (HTTPS runsslserver)",
+            "type": "debugpy",
+            "request": "launch",
+            "args": [
+                "runsslserver",
+                "0.0.0.0:8000"
+            ],
+            "django": true,
+            "autoStartBrowser": false,
+            "program": "${workspaceFolder}\\manage.py",
+            "env": {
+                "PYTHONUNBUFFERED": "1"
+            }
         }
     ]
 }

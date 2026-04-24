@@ -17,12 +17,36 @@
         .meta .k { color: #7f8c8d; font-size: 13px; }
         .meta .v { color: #2c3e50; font-size: 14px; font-weight: 600; }
         .error { margin-top: 12px; color: #e74c3c; font-size: 14px; }
+        .trend-grid { margin-top: 14px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+        .trend-card { background: #fbfcfe; border: 1px solid #eef2f7; border-radius: 10px; padding: 12px; }
+        .trend-title { font-size: 13px; font-weight: 700; color: #2c3e50; margin-bottom: 8px; }
+        .trend-chart-box { height: 140px; }
+        .trend-canvas { width: 100% !important; height: 100% !important; display: block; }
+        .trend-slider { margin-top: 10px; display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid #eef2f7; background: #fbfcfe; border-radius: 10px; }
+        .trend-slider input[type="range"] { width: 100%; }
+        .trend-slider .label { white-space: nowrap; font-size: 12px; color: #2c3e50; font-weight: 700; }
+        .filter-bar { margin-top: 12px; padding: 12px; border: 1px solid #eef2f7; background: #fbfcfe; border-radius: 10px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px 12px; align-items: end; }
+        .filter-item { display: flex; flex-direction: column; gap: 6px; }
+        .filter-item label { font-size: 12px; color: #7f8c8d; }
+        .filter-item input, .filter-item select { height: 34px; padding: 6px 10px; border: 1px solid #e5e7eb; border-radius: 8px; background: #fff; font-size: 13px; color: #2c3e50; }
+        .filter-actions { display: flex; gap: 10px; align-items: center; width: 100%; }
+        .filter-actions .primary-btn, .filter-actions .link-btn { flex: 1; justify-content: center; }
+        .primary-btn { background: #3498db; color: #fff; border: none; padding: 8px 14px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 700; height: 34px; }
+        .primary-btn:hover { background: #2980b9; }
+        .link-btn { font-size: 13px; color: #2c3e50; text-decoration: none; padding: 8px 10px; border-radius: 8px; border: 1px solid #e5e7eb; background: #fff; height: 34px; display: inline-flex; align-items: center; }
+        .link-btn:hover { background: #f8f9fa; }
+        @media (max-width: 1100px) { .filter-bar { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+        @media (max-width: 640px) { .filter-bar { grid-template-columns: 1fr; } }
+        @media (max-width: 1100px) { .trend-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+        @media (max-width: 640px) { .trend-grid { grid-template-columns: 1fr; } }
         .table-wrap { margin-top: 16px; overflow-x: auto; }
         table { width: 100%; border-collapse: collapse; }
         th { background: #f8f9fa; text-align: left; padding: 12px; border-bottom: 2px solid #e5e7eb; font-size: 13px; color: #2c3e50; white-space: nowrap; }
         td { padding: 12px; border-bottom: 1px solid #eef2f7; font-size: 13px; color: #2c3e50; white-space: nowrap; }
         tr:hover { background: #fafafa; }
         .empty { text-align: center; color: #7f8c8d; padding: 22px; }
+        .danger-btn { background: #e74c3c; color: #fff; border: none; padding: 6px 10px; border-radius: 8px; cursor: pointer; font-size: 12px; }
+        .danger-btn:hover { background: #c0392b; }
         .pager { margin-top: 14px; display: flex; gap: 10px; align-items: center; justify-content: flex-end; flex-wrap: wrap; }
         .pager a, .pager span { font-size: 13px; color: #2c3e50; text-decoration: none; }
         .pager a { padding: 6px 10px; border: 1px solid #e5e7eb; border-radius: 8px; background: #fff; }
@@ -50,6 +74,55 @@
                 <div class="error">{{ error }}</div>
             {% endif %}
 
+            <div class="trend-grid" id="trendGrid">
+                <div class="trend-card">
+                    <div class="trend-title">血压趋势（收缩压/舒张压）</div>
+                    <div class="trend-chart-box"><canvas class="trend-canvas" id="chartBP"></canvas></div>
+                </div>
+                <div class="trend-card">
+                    <div class="trend-title">血糖趋势</div>
+                    <div class="trend-chart-box"><canvas class="trend-canvas" id="chartSugar"></canvas></div>
+                </div>
+                <div class="trend-card">
+                    <div class="trend-title">BMI 趋势</div>
+                    <div class="trend-chart-box"><canvas class="trend-canvas" id="chartBMI"></canvas></div>
+                </div>
+                <div class="trend-card">
+                    <div class="trend-title">体重趋势</div>
+                    <div class="trend-chart-box"><canvas class="trend-canvas" id="chartWeight"></canvas></div>
+                </div>
+            </div>
+
+            <div class="trend-slider" id="trendSliderWrap" style="display:none;">
+                <div class="label" id="trendSliderLabel">最新 30 条</div>
+                <input type="range" id="trendSlider" min="0" max="0" value="0" step="1" />
+            </div>
+
+            <form class="filter-bar" method="get" action="{% url 'user_results' %}">
+                <input type="hidden" name="user_id" value="{{ user_id|escape }}" />
+                <div class="filter-item">
+                    <label>开始日期</label>
+                    <input type="date" name="start_date" value="{{ filters.start_date|default:'' }}" />
+                </div>
+                <div class="filter-item">
+                    <label>结束日期</label>
+                    <input type="date" name="end_date" value="{{ filters.end_date|default:'' }}" />
+                </div>
+                <div class="filter-item">
+                    <label>健康状况</label>
+                    <select name="health_status">
+                        <option value="">全部</option>
+                        {% for s in health_status_options %}
+                            <option value="{{ s|escape }}" {% if filters.health_status == s %}selected{% endif %}>{{ s }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="filter-actions">
+                    <button class="primary-btn" type="submit">查询</button>
+                    <a class="link-btn" href="{% url 'user_results' %}?user_id={{ user_id|urlencode }}">重置</a>
+                </div>
+            </form>
+
             <div class="table-wrap">
                 <table>
                     <thead>
@@ -61,6 +134,7 @@
                             <th>血压</th>
                             <th>血糖</th>
                             <th>健康状况</th>
+                            <th>操作</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -73,9 +147,20 @@
                             <td>{% if r.blood_pressure %}{{ r.blood_pressure }}{% else %}-{% endif %}</td>
                             <td>{% if r.blood_sugar is not None %}{{ r.blood_sugar }}{% else %}-{% endif %}</td>
                             <td>{% if r.health_status %}{{ r.health_status }}{% else %}-{% endif %}</td>
+                            <td>
+                                {% if r.assessment_date_iso %}
+                                    <button class="danger-btn js-delete-row"
+                                            data-user-id="{{ user_id|escape }}"
+                                            data-assessment-date="{{ r.assessment_date_iso|escape }}">
+                                        删除
+                                    </button>
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
                         </tr>
                         {% empty %}
-                        <tr><td class="empty" colspan="7">暂无该用户的历史检测数据</td></tr>
+                        <tr><td class="empty" colspan="8">暂无该用户的历史检测数据</td></tr>
                         {% endfor %}
                     </tbody>
                 </table>
@@ -84,8 +169,8 @@
             {% if page_obj %}
             <div class="pager">
                 {% if page_obj.has_previous %}
-                    <a href="?user_id={{ user_id|urlencode }}&page=1">首页</a>
-                    <a href="?user_id={{ user_id|urlencode }}&page={{ page_obj.previous_page_number }}">上一页</a>
+                    <a href="?user_id={{ user_id|urlencode }}&page=1{{ query_extra }}">首页</a>
+                    <a href="?user_id={{ user_id|urlencode }}&page={{ page_obj.previous_page_number }}{{ query_extra }}">上一页</a>
                 {% else %}
                     <span class="disabled">首页</span>
                     <span class="disabled">上一页</span>
@@ -94,8 +179,8 @@
                 <span class="meta">第 {{ page_obj.number }} / {{ page_obj.paginator.num_pages }} 页</span>
 
                 {% if page_obj.has_next %}
-                    <a href="?user_id={{ user_id|urlencode }}&page={{ page_obj.next_page_number }}">下一页</a>
-                    <a href="?user_id={{ user_id|urlencode }}&page={{ page_obj.paginator.num_pages }}">末页</a>
+                    <a href="?user_id={{ user_id|urlencode }}&page={{ page_obj.next_page_number }}{{ query_extra }}">下一页</a>
+                    <a href="?user_id={{ user_id|urlencode }}&page={{ page_obj.paginator.num_pages }}{{ query_extra }}">末页</a>
                 {% else %}
                     <span class="disabled">下一页</span>
                     <span class="disabled">末页</span>
@@ -104,5 +189,176 @@
             {% endif %}
         </div>
     </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script>
+        (function () {
+            function getCookie(name) {
+                const v = `; ${document.cookie}`;
+                const parts = v.split(`; ${name}=`);
+                if (parts.length === 2) return parts.pop().split(";").shift();
+                return "";
+            }
+
+            document.addEventListener("click", async function (e) {
+                const btn = e.target && e.target.closest ? e.target.closest(".js-delete-row") : null;
+                if (!btn) return;
+                const userId = btn.getAttribute("data-user-id") || "";
+                const assessmentDate = btn.getAttribute("data-assessment-date") || "";
+                if (!userId || !assessmentDate) return;
+                if (!confirm("确定删除这条记录吗？")) return;
+
+                btn.disabled = true;
+                try {
+                    const resp = await fetch("{% url 'user_result_delete' %}", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "X-CSRFToken": getCookie("csrftoken"),
+                        },
+                        body: JSON.stringify({ user_id: userId, assessment_date: assessmentDate }),
+                    });
+                    const data = await resp.json();
+                    if (!data || !data.ok) throw new Error((data && data.error) || "删除失败");
+                    location.reload();
+                } catch (err) {
+                    alert(String(err && err.message ? err.message : err));
+                    btn.disabled = false;
+                }
+            });
+
+            const trend = JSON.parse('{{ trend_json|default:"{}"|escapejs }}');
+            const labels = Array.isArray(trend.labels) ? trend.labels : [];
+            const hasAnyData = labels.length > 0;
+            const grid = document.getElementById("trendGrid");
+            if (!hasAnyData || !grid || typeof Chart === "undefined") {
+                if (grid) grid.style.display = "none";
+                return;
+            }
+
+            const WINDOW_SIZE = 10;
+            const sliderWrap = document.getElementById("trendSliderWrap");
+            const slider = document.getElementById("trendSlider");
+            const sliderLabel = document.getElementById("trendSliderLabel");
+
+            const raw = {
+                labels,
+                bp_sys: Array.isArray(trend.bp_sys) ? trend.bp_sys : [],
+                bp_dia: Array.isArray(trend.bp_dia) ? trend.bp_dia : [],
+                blood_sugar: Array.isArray(trend.blood_sugar) ? trend.blood_sugar : [],
+                bmi: Array.isArray(trend.bmi) ? trend.bmi : [],
+                weight: Array.isArray(trend.weight) ? trend.weight : [],
+            };
+
+            function shortTimeLabel(v) {
+                const s = String(v || "");
+                // 期望输入：YYYY-MM-DD HH:MM:SS 或 YYYY-MM-DD HH:MM:SS.ffffff
+                if (s.length >= 16 && s[4] === "-" && s[7] === "-") {
+                    const mmdd = s.slice(5, 10);
+                    const hm = s.slice(11, 16);
+                    return [mmdd, hm];
+                }
+                return s;
+            }
+
+            function lineChart(canvasId, datasets, yTitle) {
+                const el = document.getElementById(canvasId);
+                if (!el) return;
+                return new Chart(el, {
+                    type: "line",
+                    data: { labels, datasets },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: { mode: "index", intersect: false },
+                        plugins: {
+                            legend: { display: true, position: "top", labels: { boxWidth: 10, boxHeight: 10 } },
+                            tooltip: { enabled: true },
+                        },
+                        scales: {
+                            x: {
+                                ticks: {
+                                    autoSkip: false,
+                                    maxRotation: 0,
+                                    minRotation: 0,
+                                    callback: function (value) {
+                                        const label = this.getLabelForValue(value);
+                                        return shortTimeLabel(label);
+                                    },
+                                },
+                            },
+                            y: { title: { display: !!yTitle, text: yTitle || "" } },
+                        },
+                        elements: { point: { radius: 1.8 } },
+                    },
+                });
+            }
+
+            const common = { tension: 0.25, spanGaps: true };
+            const chartBP = lineChart("chartBP", [
+                { label: "收缩压", data: raw.bp_sys, borderColor: "#e74c3c", backgroundColor: "rgba(231,76,60,0.12)", ...common },
+                { label: "舒张压", data: raw.bp_dia, borderColor: "#9b59b6", backgroundColor: "rgba(155,89,182,0.12)", ...common },
+            ], "mmHg");
+
+            const chartSugar = lineChart("chartSugar", [
+                { label: "血糖", data: raw.blood_sugar, borderColor: "#3498db", backgroundColor: "rgba(52,152,219,0.12)", ...common },
+            ], "");
+
+            const chartBMI = lineChart("chartBMI", [
+                { label: "BMI", data: raw.bmi, borderColor: "#16a085", backgroundColor: "rgba(22,160,133,0.12)", ...common },
+            ], "");
+
+            const chartWeight = lineChart("chartWeight", [
+                { label: "体重", data: raw.weight, borderColor: "#f39c12", backgroundColor: "rgba(243,156,18,0.12)", ...common },
+            ], "kg");
+
+            const charts = [chartBP, chartSugar, chartBMI, chartWeight].filter(Boolean);
+
+            function applyWindow(startIndex) {
+                const start = Math.max(0, Math.min(startIndex, raw.labels.length));
+                const end = Math.min(raw.labels.length, start + WINDOW_SIZE);
+                const slicedLabels = raw.labels.slice(start, end);
+
+                function sliceArr(arr) { return (Array.isArray(arr) ? arr.slice(start, end) : []); }
+
+                for (const c of charts) {
+                    c.data.labels = slicedLabels;
+                    for (const ds of c.data.datasets) {
+                        if (ds.label === "收缩压") ds.data = sliceArr(raw.bp_sys);
+                        else if (ds.label === "舒张压") ds.data = sliceArr(raw.bp_dia);
+                        else if (ds.label === "血糖") ds.data = sliceArr(raw.blood_sugar);
+                        else if (ds.label === "BMI") ds.data = sliceArr(raw.bmi);
+                        else if (ds.label === "体重") ds.data = sliceArr(raw.weight);
+                    }
+                    c.update("none");
+                }
+
+                if (sliderLabel) {
+                    const total = raw.labels.length;
+                    const showFrom = start + 1;
+                    const showTo = Math.min(end, total);
+                    sliderLabel.textContent = `显示 ${showFrom}-${showTo} / 共 ${total}`;
+                }
+            }
+
+            // 初始化：默认显示最新 30 条（不足则全量）
+            const total = raw.labels.length;
+            const maxStart = Math.max(0, total - WINDOW_SIZE);
+            if (slider && sliderWrap) {
+                sliderWrap.style.display = "flex";
+                slider.min = "0";
+                slider.max = String(maxStart);
+                slider.value = String(maxStart);
+                slider.disabled = total <= WINDOW_SIZE;
+                slider.addEventListener("input", function () {
+                    applyWindow(parseInt(slider.value || "0", 10) || 0);
+                });
+                if (sliderLabel && total <= WINDOW_SIZE) {
+                    sliderLabel.textContent = `共 ${total} 条（已全部显示）`;
+                }
+            }
+            applyWindow(total > WINDOW_SIZE ? maxStart : 0);
+        })();
+    </script>
 </body>
 </html>

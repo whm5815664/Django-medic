@@ -15,7 +15,7 @@ from deepface import DeepFace
 
 from main.data.dashboard import build_dashboard_rows
 from main.data.addUser import add_user_from_request
-from main.data.userResults import build_user_results_context
+from main.data.userResults import build_user_results_context, delete_assessment_by_user_and_dt
 from main.SRGA.SRGA_form import srga_submit
 from main.SRGA.SRGA_form import srga_reset_temp
 from django.views.decorators.csrf import csrf_exempt
@@ -34,8 +34,30 @@ def dashboard(request):
 
 def user_results(request):
     page = int(request.GET.get("page", "1") or "1")
-    context = build_user_results_context(request.GET.get("user_id", ""), page=page, page_size=20)
+    context = build_user_results_context(
+        request.GET.get("user_id", ""),
+        page=page,
+        page_size=20,
+        start_date=request.GET.get("start_date", ""),
+        end_date=request.GET.get("end_date", ""),
+        health_status=request.GET.get("health_status", ""),
+    )
     return render(request, "userResults/useresults.html", context)
+
+
+from django.views.decorators.http import require_POST
+
+
+@require_POST
+def user_result_delete(request):
+    try:
+        payload = json.loads((request.body or b"{}").decode("utf-8"))
+        user_id = (payload.get("user_id") or "").strip()
+        assessment_date = (payload.get("assessment_date") or "").strip()
+        deleted = delete_assessment_by_user_and_dt(user_id=user_id, assessment_date=assessment_date)
+        return JsonResponse({"ok": True, "deleted": deleted})
+    except Exception as e:
+        return JsonResponse({"ok": False, "error": str(e)}, status=400)
 
 def add_user_api(request):
     try:

@@ -1,0 +1,1616 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能体助手</title>
+    <style>
+        /* ========== 嵌入模式（被 iframe 包裹时） ==========
+           目标：只显示内部聊天界面，不显示外层遮罩与居中小窗效果 */
+        html.agent-embedded,
+        body.agent-embedded {
+            height: 100%;
+        }
+
+        body.agent-embedded {
+            margin: 0;
+            background: transparent;
+        }
+
+        body.agent-embedded .agent-modal-overlay {
+            position: static;
+            width: 100%;
+            height: 100%;
+            background: transparent;
+            backdrop-filter: none;
+            padding: 0;
+            display: flex; /* 覆盖 display:none */
+        }
+
+        body.agent-embedded .agent-modal-overlay.show {
+            display: flex;
+        }
+
+        body.agent-embedded .agent-modal-container {
+            width: 100%;
+            height: 100%;
+            max-width: 100%;
+            max-height: 100%;
+            border-radius: 0;
+            border: none;
+            box-shadow: none;
+            animation: none;
+        }
+
+        /* iframe 模式下：外层弹窗由父页面控制，避免“点空白关闭”误触 */
+        body.agent-embedded #agent-modal-overlay {
+            cursor: default;
+        }
+
+        /* iframe 模式下关闭由里层按钮触发（会通知父页面关闭外层弹窗） */
+
+        /* ========== 弹窗遮罩层 ========== */
+        .agent-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(8px);
+            z-index: 10000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .agent-modal-overlay.show {
+            display: flex;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* ========== 弹窗容器（白色客服风格，小尺寸） ========== */
+        .agent-modal-container {
+            width: 360px;
+            height: 420px;
+            max-width: 100%;
+            max-height: 100%;
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: none;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+            animation: slideUp 0.25s ease;
+            border: 1px solid #e5e7eb;
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(30px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        /* ========== 弹窗头部 ========== */
+        .agent-modal-header {
+            padding: 12px 14px;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #ffffff;
+        }
+
+        .agent-modal-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.95em;
+            font-weight: 700;
+            color: #111827;
+        }
+
+        .agent-modal-close {
+            width: 32px;
+            height: 32px;
+            border: none;
+            background: #f3f4f6;
+            color: #111827;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .agent-modal-close:hover {
+            background: #e5e7eb;
+            transform: rotate(90deg);
+        }
+
+        /* ========== 刷新按钮 ========== */
+        .agent-modal-refresh {
+            padding: 7px 12px;
+            background: #f3f4f6;
+            border: 1px solid #e5e7eb;
+            color: #111827;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 700;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+        }
+
+        .agent-modal-refresh:hover:not(:disabled) {
+            background: #e5e7eb;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 14px rgba(0,0,0,0.08);
+        }
+
+        .agent-modal-refresh:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
+
+        .agent-modal-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* ========== 聊天容器 ========== */
+        .agent-chat-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* ========== 消息显示区域 ========== */
+        .agent-chat-box {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            background: #f9fafb;
+        }
+
+        .agent-chat-box::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .agent-chat-box::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .agent-chat-box::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+        }
+
+        .agent-chat-box::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        /* ========== 消息样式 ========== */
+        .agent-message {
+            display: flex;
+            gap: 10px;
+            animation: messageSlideIn 0.3s ease-out;
+            max-width: 90%;
+        }
+
+        @keyframes messageSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .agent-message.user-message {
+            align-self: flex-end;
+            flex-direction: row-reverse;
+        }
+
+        .agent-message.bot-message {
+            align-self: flex-start;
+        }
+
+        .agent-message-avatar {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            flex-shrink: 0;
+            background: #e5e7eb;
+            color: #111827;
+        }
+
+        .agent-message-content {
+            padding: 10px 12px;
+            border-radius: 10px;
+            line-height: 1.55;
+            word-wrap: break-word;
+            white-space: pre-wrap;
+            border: 1px solid #e5e7eb;
+            background: #ffffff;
+            color: #111827;
+            font-size: 12px;
+        }
+
+        .agent-user-message .agent-message-content {
+            background: #eef2ff;
+            border-color: #e0e7ff;
+            border-bottom-right-radius: 4px;
+        }
+
+        .agent-bot-message .agent-message-content {
+            background: #ffffff;
+            border-color: #e5e7eb;
+            border-bottom-left-radius: 4px;
+        }
+
+        .agent-bot-content {
+            color: #111827;
+        }
+
+        .agent-bot-content code {
+            background: #f3f4f6;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .agent-bot-content pre {
+            background: #f3f4f6;
+            padding: 10px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 8px 0;
+        }
+
+        .agent-bot-content a {
+            color: #6366f1;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-weight: 600;
+        }
+
+        .agent-bot-content a:hover {
+            color: #4f46e5;
+            text-decoration: underline;
+        }
+
+        /* ========== 思考过程样式 ========== */
+        .reasoning-section {
+            margin: 8px 0;
+            padding: 8px 12px;
+            background: #f3f4f6;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 11px;
+            color: #6b7280;
+            line-height: 1.0;
+            font-family: ui-monospace, 'Cascadia Code', 'Consolas', monospace;
+            white-space: pre-wrap; /* 命令输出/推理过程保留换行 */
+        }
+
+        .reasoning-pre {
+            margin: 0;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .reasoning-section strong {
+            color: #4b5563;
+            font-size: 11px;
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .text-section {
+            margin: 8px 0;
+        }
+
+        .text-section strong {
+            color: #111827;
+            font-size: 12px;
+            display: block;
+            margin-bottom: 6px;
+        }
+
+        /* ========== Markdown 渲染区（正文排版与 agent_view.html 一致，白底主题） ========== */
+        .agent-bot-content .markdown-body {
+            margin-top: 4px;
+            line-height: 1.4;
+            white-space: normal; /* 覆盖 pre-wrap，避免多余换行 */
+            color: #111827;
+            font-size: 12px;
+            overflow-x: auto;
+        }
+
+        .agent-bot-content .markdown-body > :first-child {
+            margin-top: 0;
+        }
+
+        .agent-bot-content .markdown-body > :last-child {
+            margin-bottom: 0;
+        }
+
+        .agent-bot-content .markdown-body h1 {
+            font-size: 1.35em;
+            margin: 0.5em 0 0.28em;
+            color: #111827;
+            font-weight: 700;
+        }
+
+        .agent-bot-content .markdown-body h2 {
+            font-size: 1.22em;
+            margin: 0.48em 0 0.26em;
+            color: #111827;
+            font-weight: 600;
+            border-bottom: 1px solid #e5e7eb;
+            padding-bottom: 0.22em;
+        }
+
+        .agent-bot-content .markdown-body h3 {
+            font-size: 1.08em;
+            margin: 0.42em 0 0.22em;
+            color: #111827;
+            font-weight: 600;
+        }
+
+        .agent-bot-content .markdown-body h4,
+        .agent-bot-content .markdown-body h5,
+        .agent-bot-content .markdown-body h6 {
+            margin: 0.35em 0 0.18em;
+            color: #111827;
+            font-weight: 600;
+        }
+
+        .agent-bot-content .markdown-body p {
+            margin: 0.2em 0;
+            line-height: 1.4;
+        }
+
+        /* 修复：避免 strong 被意外变成块级导致换行 */
+        .agent-bot-content .markdown-body strong {
+            display: inline;
+        }
+
+        .agent-bot-content .markdown-body ul,
+        .agent-bot-content .markdown-body ol {
+            margin: 0.22em 0 0.22em 1.15em;
+            padding-left: 0.45em;
+        }
+
+        .agent-bot-content .markdown-body li {
+            margin: 0.1em 0;
+            line-height: 1.38;
+        }
+
+        .agent-bot-content .markdown-body li > p {
+            margin: 0.1em 0;
+        }
+
+        .agent-bot-content .markdown-body table {
+            border-collapse: collapse;
+            width: 100%;
+            max-width: 100%;
+            margin: 0.35em 0;
+            font-size: 0.9em;
+            background: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid #e5e7eb;
+        }
+
+        .agent-bot-content .markdown-body th,
+        .agent-bot-content .markdown-body td {
+            border: 1px solid #e5e7eb;
+            padding: 5px 8px;
+            text-align: left;
+            vertical-align: top;
+        }
+
+        .agent-bot-content .markdown-body th {
+            background: #f9fafb;
+            color: #111827;
+            font-weight: 600;
+        }
+
+        .agent-bot-content .markdown-body tbody tr:nth-child(even) td {
+            background: #fafafa;
+        }
+
+        .agent-bot-content .markdown-body code {
+            background: #f3f4f6;
+            padding: 0.15em 0.4em;
+            border-radius: 4px;
+            font-size: 0.9em;
+            font-family: ui-monospace, 'Cascadia Code', 'Consolas', monospace;
+        }
+
+        .agent-bot-content .markdown-body pre {
+            background: rgba(0, 0, 0, 0.06);
+            padding: 8px 10px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 0.35em 0;
+            line-height: 1.35;
+            border: 1px solid #e5e7eb;
+        }
+
+        .agent-bot-content .markdown-body pre code {
+            background: none;
+            padding: 0;
+            font-size: 0.88em;
+        }
+
+        .agent-bot-content .markdown-body blockquote {
+            margin: 0.25em 0;
+            padding: 0.2em 0 0.2em 10px;
+            border-left: 3px solid rgba(37, 99, 235, 0.45);
+            color: #4b5563;
+            background: rgba(37, 99, 235, 0.06);
+            border-radius: 8px;
+        }
+
+        .agent-bot-content .markdown-body a {
+            color: #2563eb;
+            text-decoration: underline;
+            text-underline-offset: 2px;
+        }
+
+        .agent-bot-content .markdown-body hr {
+            border: none;
+            border-top: 1px solid #e5e7eb;
+            margin: 0.45em 0;
+        }
+
+        /* ========== 加载动画 ========== */
+        .agent-loading-dots {
+            display: inline-block;
+        }
+
+        .agent-loading-dots::after {
+            content: '...';
+            animation: dots 1.5s steps(4, end) infinite;
+        }
+
+        @keyframes dots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60%, 100% { content: '...'; }
+        }
+
+        /* ========== 输入区域 ========== */
+        .agent-input-area {
+            padding: 10px 12px;
+            border-top: 1px solid #e5e7eb;
+            background: #ffffff;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: nowrap;
+            font-size: 12px;
+        }
+
+        .agent-input-wrapper {
+            flex: 1;
+            position: relative;
+            min-width: 0; /* 关键：允许在小窗内收缩，避免遮挡按钮 */
+        }
+
+        .agent-question-input {
+            width: 100%;
+            padding: 9px 11px;
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            color: #111827;
+            font-size: 12px;
+            outline: none;
+            transition: all 0.2s ease;
+            box-sizing: border-box;
+        }
+
+        .agent-question-input:focus {
+            border-color: #6366f1;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+            background: #ffffff;
+        }
+
+        .agent-question-input::placeholder {
+            color: #9ca3af;
+        }
+
+        .agent-send-btn {
+            padding: 9px 22px;
+            min-width: 88px;
+            background: #6366f1;
+            border: none;
+            border-radius: 10px;
+            color: #fff;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+            flex: 0 0 auto;
+        }
+
+        .agent-send-btn:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 16px rgba(99, 102, 241, 0.3);
+        }
+
+        .agent-send-btn:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
+
+        .agent-health-btn {
+            padding: 9px 12px;
+            background: #10b981;
+            border: none;
+            border-radius: 10px;
+            color: #fff;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+            flex: 0 0 auto;
+        }
+
+        .agent-health-btn:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 16px rgba(16, 185, 129, 0.28);
+        }
+
+        .agent-health-btn:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
+
+        .agent-quickbar {
+            padding: 10px 12px;
+            border-top: 1px solid #e5e7eb;
+            background: #ffffff;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .agent-quickbar-title {
+            font-size: 12px;
+            font-weight: 800;
+            color: #111827;
+            white-space: nowrap;
+        }
+
+        .agent-quickbar-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        /* ========== 终止按钮 ========== */
+        .agent-stop-btn {
+            padding: 9px 12px;
+            background: #ef4444;
+            border: none;
+            border-radius: 10px;
+            color: #fff;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+            flex: 0 0 auto;
+            display: none; /* 默认隐藏，发送后显示 */
+        }
+
+        .agent-stop-btn:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 16px rgba(239, 68, 68, 0.25);
+        }
+
+        .agent-stop-btn:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
+
+        .agent-clear-btn {
+            padding: 9px 12px;
+            background: #f3f4f6;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            color: #374151;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .agent-clear-btn:hover {
+            background: #e5e7eb;
+        }
+
+        /* ========== 欢迎消息 ========== */
+        .agent-welcome-message {
+            text-align: left;
+            padding: 6px 2px;
+            color: #4b5563;
+        }
+
+        .agent-welcome-message p {
+            margin: 4px 0;
+            font-size: 12px;
+        }
+
+        /* ========== 响应式设计 ========== */
+        @media (max-width: 768px) {
+            .agent-modal-container {
+                width: 100%;
+                height: 100vh;
+                max-height: 100vh;
+                border-radius: 0;
+            }
+
+            .agent-message {
+                max-width: 90%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <style>
+        /* 更小的基础字号（客服小窗更紧凑） */
+        body { font-size: 12px; }
+    </style>
+    <!-- 弹窗遮罩层 -->
+    <div id="agent-modal-overlay" class="agent-modal-overlay">
+        <div class="agent-modal-container">
+            <!-- 弹窗头部 -->
+            <div class="agent-modal-header">
+                <div class="agent-modal-title">
+                    <span>🤖</span>
+                    <span>智能体助手</span>
+                </div>
+                <div class="agent-modal-actions">
+                    <button class="agent-modal-refresh" id="agent-refresh-btn" type="button" onclick="refreshAgentSession()">
+                        <span>🔄</span> 刷新
+                    </button>
+                    <button class="agent-modal-close" onclick="closeAgentModal()">×</button>
+                </div>
+            </div>
+
+            <!-- 聊天容器 -->
+            <div class="agent-chat-container">
+                <!-- 消息显示区域 -->
+                <div class="agent-chat-box" id="agent-chat-box">
+                    <!-- 欢迎消息 -->
+                    <div class="agent-message agent-bot-message">
+                        <div class="agent-message-avatar">🤖</div>
+                        <div class="agent-message-content agent-bot-content">
+                            <div class="agent-welcome-message">
+                                <p>欢迎使用AIoT实验室的智能体助手</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 快捷分析栏 -->
+                <div class="agent-quickbar">
+                    <div class="agent-quickbar-title">快捷分析</div>
+                    <div class="agent-quickbar-actions">
+                        <button class="agent-health-btn" type="button" id="agent-quick-health-btn" onclick="sendHealthEvolution()">健康演化分析</button>
+                        <button class="agent-health-btn" type="button" id="agent-quick-plan-btn" onclick="sendTreatmentPlan()">治疗方案建议</button>
+                    </div>
+                </div>
+
+                <!-- 输入区域 -->
+                <div class="agent-input-area">
+                    <div class="agent-input-wrapper">
+                        <input 
+                            type="text" 
+                            id="agent-question-input" 
+                            class="agent-question-input" 
+                            placeholder="请输入您的问题..." 
+                            autocomplete="off"
+                        >
+                    </div>
+                    <button class="agent-stop-btn" id="agent-stop-btn" onclick="forceStopAgentAnswer()">终止</button>
+                    <button class="agent-send-btn" id="agent-send-btn" onclick="sendAgentQuestion()">发送</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
+    <script>
+        // 接入 aiModels.agent.brain_agent：创建/发送/删除会话（opencode 后台）
+        // API: agent_create_session_view, agent_send_message_view, agent_delete_session_view
+        // ========== 全局变量 ==========
+        let agentChatHistory = [];
+        let isAgentProcessing = false;
+        let isAgentRefreshing = false;
+        let currentAgentAbortController = null;
+        /** 当前 opencode 会话 id，页面打开时创建，关闭时删除 */
+        let agentSessionId = null;
+        /** 会话 API 前缀（由 brain_agent 提供：agent/session/create、send、delete） */
+        const agentApiBase = "{% url 'agent_session_create' %}".replace(/\/create\/?$/, '');
+        /** 智能体后台页面URL */
+        const agentViewUrl = "{% url 'agent_view' %}";
+
+        function detectEmbeddedMode() {
+            try {
+                return window.parent && window.parent !== window;
+            } catch (e) {
+                return true;
+            }
+        }
+
+        /**
+         * 从弹窗/iframe 内跳转到智能体后台：优先让父页面跳转（不新建窗口）
+         * @param {Event=} e
+         */
+        function navigateToAgentView(e) {
+            if (e && typeof e.preventDefault === 'function') e.preventDefault();
+            const url = agentViewUrl;
+            try {
+                if (window.parent && window.parent !== window) {
+                    window.parent.location.href = url;
+                    return;
+                }
+            } catch (err) {
+                // cross-origin 或被浏览器限制时，回退到当前页跳转
+            }
+            window.location.href = url;
+        }
+
+        // ========== 工具函数 ==========
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Markdown（GFM 含表格）+ 安全过滤
+        if (typeof marked !== 'undefined' && marked.use) {
+            /* breaks: false 避免单换行变 <br>，减少多余空行 */
+            marked.use({ gfm: true, breaks: false });
+        }
+
+        function renderMarkdown(md) {
+            if (md == null || md === '') return '';
+            const s = String(md);
+            try {
+                if (typeof marked !== 'undefined' && typeof marked.parse === 'function') {
+                    const raw = marked.parse(s, { async: false });
+                    if (typeof DOMPurify !== 'undefined' && typeof DOMPurify.sanitize === 'function') {
+                        return DOMPurify.sanitize(raw);
+                    }
+                    return raw;
+                }
+            } catch (e) {
+                console.warn('Markdown 渲染失败:', e);
+            }
+            return escapeHtml(s).replace(/\n/g, '<br>');
+        }
+
+        function buildAgentReplyHtml(reasoningPlain, answerMd) {
+            const parts = [];
+            if (reasoningPlain) {
+                parts.push(
+                    '<div class="reasoning-section"><strong>[思考过程]</strong>' +
+                    '<pre class="reasoning-pre">' + escapeHtml(reasoningPlain) + '</pre>' +
+                    '</div>'
+                );
+            }
+            if (answerMd) {
+                parts.push(
+                    '<div class="text-section"><strong>[回答]</strong>' +
+                    '<div class="markdown-body">' + renderMarkdown(answerMd) + '</div></div>'
+                );
+            }
+            return parts.join('');
+        }
+
+        // ========== 消息管理 ==========
+        function addAgentMessage(role, content, messageId = null, isLoading = false) {
+            const chatBox = document.getElementById('agent-chat-box');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `agent-message ${role === 'user' ? 'agent-user-message' : 'agent-bot-message'}`;
+            if (messageId) {
+                messageDiv.id = messageId;
+            }
+
+            const avatar = document.createElement('div');
+            avatar.className = 'agent-message-avatar';
+            avatar.textContent = role === 'user' ? '👤' : '🤖';
+
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'agent-message-content';
+            
+            if (role === 'user') {
+                contentDiv.textContent = content;
+            } else {
+                contentDiv.className += ' agent-bot-content';
+                if (isLoading) {
+                    contentDiv.innerHTML = content;
+                } else {
+                    contentDiv.innerHTML = '<div class="markdown-body">' + renderMarkdown(content) + '</div>';
+                }
+            }
+
+            messageDiv.appendChild(avatar);
+            messageDiv.appendChild(contentDiv);
+            chatBox.appendChild(messageDiv);
+
+            // 滚动到底部
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            return messageDiv;
+        }
+
+        // ========== 更新思考中消息 ==========
+        function updateThinkingMessage(thinkingId, message) {
+            const thinkingEl = document.getElementById(thinkingId);
+            if (thinkingEl) {
+                const contentDiv = thinkingEl.querySelector('.agent-message-content');
+                if (contentDiv) {
+                    contentDiv.innerHTML = message;
+                }
+            }
+        }
+
+        // ========== 发送问题（调用 opencode send_message，流式SSE） ==========
+        function sendAgentQuestion() {
+            const input = document.getElementById('agent-question-input');
+            const question = input.value.trim();
+            const sendBtn = document.getElementById('agent-send-btn');
+            const stopBtn = document.getElementById('agent-stop-btn');
+
+            if (!question) return;
+            if (isAgentProcessing) return;
+            if (isAgentRefreshing) return;
+            if (!agentSessionId) {
+                addAgentMessage('bot', '❌ 会话未就绪，请刷新页面后重试。');
+                return;
+            }
+
+            addAgentMessage('user', question);
+            input.value = '';
+            sendBtn.disabled = true;
+            if (stopBtn) stopBtn.style.display = 'inline-block';
+
+            const thinkingId = 'thinking-' + Date.now();
+            addAgentMessage('bot', '🤔 思考中<span class="agent-loading-dots"></span>', thinkingId, true);
+            isAgentProcessing = true;
+
+            const thinkingElement = document.getElementById(thinkingId);
+            let botMessageId = 'bot-msg-' + Date.now();
+            let botMessageEl = null;
+            let reasoningContent = '';
+            let textContent = '';
+
+            currentAgentAbortController = new AbortController();
+
+            fetch(agentApiBase + '/send', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken') || ''
+                },
+                body: JSON.stringify({ session_id: agentSessionId, message: question }),
+                signal: currentAgentAbortController.signal
+            })
+            .then(function(response) {
+                if (!response.ok) {
+                    throw new Error('HTTP ' + response.status + ': ' + response.statusText);
+                }
+                
+                // 移除思考中消息
+                if (thinkingElement) {
+                    thinkingElement.remove();
+                }
+                
+                // 创建新的消息气泡
+                botMessageEl = addAgentMessage('bot', '', botMessageId);
+                const contentDiv = botMessageEl.querySelector('.agent-bot-content') || botMessageEl.querySelector('.agent-message-content');
+                
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+
+                function readStream() {
+                    return reader.read().then(function({ done, value }) {
+                        if (done) {
+                            return;
+                        }
+
+                        buffer += decoder.decode(value, { stream: true });
+                        const lines = buffer.split('\n');
+                        buffer = lines.pop() || '';
+
+                        for (var i = 0; i < lines.length; i++) {
+                            const line = lines[i];
+                            if (line.startsWith('data: ')) {
+                                try {
+                                    const data = JSON.parse(line.slice(6));
+                                    
+                                    if (data.type === 'reasoning') {
+                                        reasoningContent += data.content;
+                                        if (contentDiv) {
+                                            contentDiv.innerHTML = buildAgentReplyHtml(reasoningContent, textContent);
+                                        }
+                                        var chatBox = document.getElementById('agent-chat-box');
+                                        if (chatBox) chatBox.scrollTop = chatBox.scrollHeight;
+                                    } else if (data.type === 'text') {
+                                        const delta = (data.content !== undefined && data.content !== null)
+                                            ? data.content
+                                            : (data.text || '');
+                                        textContent += delta;
+                                        if (contentDiv) {
+                                            contentDiv.innerHTML = buildAgentReplyHtml(reasoningContent, textContent);
+                                        }
+                                        var chatBox = document.getElementById('agent-chat-box');
+                                        if (chatBox) chatBox.scrollTop = chatBox.scrollHeight;
+                                    } else if (data.type === 'finished') {
+                                        // 最终内容
+                                        const finalReasoning = data.reasoning || reasoningContent;
+                                        const finalText = data.text || textContent;
+                                        if (contentDiv) {
+                                            contentDiv.innerHTML = buildAgentReplyHtml(finalReasoning, finalText);
+                                        }
+                                        
+                                        agentChatHistory.push({ role: 'user', content: question });
+                                        agentChatHistory.push({ role: 'assistant', content: finalText });
+                                        
+                                        var chatBox = document.getElementById('agent-chat-box');
+                                        if (chatBox) chatBox.scrollTop = chatBox.scrollHeight;
+                                        return;
+                                    } else if (data.type === 'error') {
+                                        if (contentDiv) {
+                                            contentDiv.innerHTML = '❌ 错误: ' + escapeHtml(data.error);
+                                        }
+                                        throw new Error(data.error);
+                                    }
+                                } catch (e) {
+                                    console.error('解析SSE数据失败:', e);
+                                }
+                            }
+                        }
+
+                        return readStream();
+                    });
+                }
+
+                return readStream();
+            })
+            .then(function() {
+                isAgentProcessing = false;
+                if (!isAgentRefreshing) {
+                    sendBtn.disabled = false;
+                    if (stopBtn) stopBtn.style.display = 'none';
+                }
+            })
+            .catch(function(error) {
+                if (error.name === 'AbortError') {
+                    console.log('请求已被用户取消');
+                    if (thinkingElement && thinkingElement.parentNode) {
+                        const contentDiv = thinkingElement.querySelector('.agent-message-content');
+                        if (contentDiv) {
+                            contentDiv.innerHTML = '⏹ 回答已停止';
+                        }
+                    } else if (botMessageEl) {
+                        const contentDiv = botMessageEl.querySelector('.agent-bot-content') || botMessageEl.querySelector('.agent-message-content');
+                        if (contentDiv) {
+                            contentDiv.innerHTML = '⏹ 回答已停止';
+                        }
+                    }
+                } else {
+                    console.error('Error:', error);
+                    if (thinkingElement && thinkingElement.parentNode) {
+                        thinkingElement.remove();
+                    }
+                    if (botMessageEl) {
+                        const contentDiv = botMessageEl.querySelector('.agent-bot-content') || botMessageEl.querySelector('.agent-message-content');
+                        if (contentDiv) {
+                            contentDiv.innerHTML = '❌ 请求失败: ' + escapeHtml(error.message || '网络错误');
+                        }
+                    } else {
+                        if (thinkingElement) thinkingElement.remove();
+                        addAgentMessage('bot', '❌ 请求失败: ' + (error.message || '网络错误'));
+                    }
+                }
+                isAgentProcessing = false;
+                if (!isAgentRefreshing) {
+                    sendBtn.disabled = false;
+                    if (stopBtn) stopBtn.style.display = 'none';
+                }
+            });
+        }
+
+        function getQueryParam(name) {
+            try {
+                const u = new URL(window.location.href);
+                return (u.searchParams.get(name) || "").trim();
+            } catch (e) {
+                return "";
+            }
+        }
+
+        function sendHealthEvolution() {
+            const sendBtn = document.getElementById('agent-send-btn');
+            const stopBtn = document.getElementById('agent-stop-btn');
+            const quickHealthBtn = document.getElementById('agent-quick-health-btn');
+            const quickPlanBtn = document.getElementById('agent-quick-plan-btn');
+
+            if (isAgentProcessing) return;
+            if (isAgentRefreshing) return;
+            if (!agentSessionId) {
+                addAgentMessage('bot', '❌ 会话未就绪，请刷新后重试。');
+                return;
+            }
+
+            const userId = getQueryParam("user_id");
+            if (!userId) {
+                addAgentMessage('bot', '❌ 缺少 user_id，无法获取患者数据。请从用户结果页打开弹窗。');
+                return;
+            }
+
+            // 在聊天框里先放一条“用户”指令，便于追踪
+            addAgentMessage('user', `健康演化分析（user_id=${userId}）`);
+
+            if (sendBtn) sendBtn.disabled = true;
+            if (quickHealthBtn) quickHealthBtn.disabled = true;
+            if (quickPlanBtn) quickPlanBtn.disabled = true;
+            if (stopBtn) stopBtn.style.display = 'inline-block';
+
+            const thinkingId = 'thinking-' + Date.now();
+            addAgentMessage('bot', '🤔 正在生成健康演化分析<span class="agent-loading-dots"></span>', thinkingId, true);
+            isAgentProcessing = true;
+
+            const thinkingElement = document.getElementById(thinkingId);
+            let botMessageId = 'bot-msg-' + Date.now();
+            let botMessageEl = null;
+            let reasoningContent = '';
+            let textContent = '';
+
+            currentAgentAbortController = new AbortController();
+
+            fetch(agentApiBase + '/health-evolution', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken') || ''
+                },
+                body: JSON.stringify({ session_id: agentSessionId, user_id: userId, analysis_type: "health_evolution" }),
+                signal: currentAgentAbortController.signal
+            })
+            .then(function(response) {
+                if (!response.ok) {
+                    throw new Error('HTTP ' + response.status + ': ' + response.statusText);
+                }
+
+                if (thinkingElement) {
+                    thinkingElement.remove();
+                }
+
+                botMessageEl = addAgentMessage('bot', '', botMessageId);
+                const contentDiv = botMessageEl.querySelector('.agent-bot-content') || botMessageEl.querySelector('.agent-message-content');
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+
+                function readStream() {
+                    return reader.read().then(function(_ref) {
+                        const done = _ref.done;
+                        const value = _ref.value;
+                        if (done) return;
+
+                        buffer += decoder.decode(value, { stream: true });
+                        const lines = buffer.split('\n');
+                        buffer = lines.pop() || '';
+
+                        for (var i = 0; i < lines.length; i++) {
+                            const line = lines[i];
+                            if (line.startsWith('data: ')) {
+                                try {
+                                    const data = JSON.parse(line.slice(6));
+                                    if (data.type === 'reasoning') {
+                                        reasoningContent += data.content;
+                                        if (contentDiv) contentDiv.innerHTML = buildAgentReplyHtml(reasoningContent, textContent);
+                                    } else if (data.type === 'text') {
+                                        const delta = (data.content !== undefined && data.content !== null) ? data.content : (data.text || '');
+                                        textContent += delta;
+                                        if (contentDiv) contentDiv.innerHTML = buildAgentReplyHtml(reasoningContent, textContent);
+                                    } else if (data.type === 'finished') {
+                                        const finalReasoning = data.reasoning || reasoningContent;
+                                        const finalText = data.text || textContent;
+                                        if (contentDiv) contentDiv.innerHTML = buildAgentReplyHtml(finalReasoning, finalText);
+                                        var chatBox = document.getElementById('agent-chat-box');
+                                        if (chatBox) chatBox.scrollTop = chatBox.scrollHeight;
+                                        return;
+                                    } else if (data.type === 'error') {
+                                        if (contentDiv) contentDiv.innerHTML = '❌ 错误: ' + escapeHtml(data.error);
+                                        throw new Error(data.error);
+                                    }
+                                    var chatBox2 = document.getElementById('agent-chat-box');
+                                    if (chatBox2) chatBox2.scrollTop = chatBox2.scrollHeight;
+                                } catch (e) {
+                                    console.error('解析SSE数据失败:', e);
+                                }
+                            }
+                        }
+                        return readStream();
+                    });
+                }
+
+                return readStream();
+            })
+            .then(function() {
+                isAgentProcessing = false;
+                if (!isAgentRefreshing) {
+                    if (sendBtn) sendBtn.disabled = false;
+                    if (quickHealthBtn) quickHealthBtn.disabled = false;
+                    if (quickPlanBtn) quickPlanBtn.disabled = false;
+                    if (stopBtn) stopBtn.style.display = 'none';
+                }
+            })
+            .catch(function(error) {
+                if (error.name === 'AbortError') {
+                    if (thinkingElement && thinkingElement.parentNode) {
+                        const c = thinkingElement.querySelector('.agent-message-content');
+                        if (c) c.innerHTML = '⏹ 已停止';
+                    } else if (botMessageEl) {
+                        const c2 = botMessageEl.querySelector('.agent-bot-content') || botMessageEl.querySelector('.agent-message-content');
+                        if (c2) c2.innerHTML = '⏹ 已停止';
+                    }
+                } else {
+                    console.error('Error:', error);
+                    if (thinkingElement && thinkingElement.parentNode) thinkingElement.remove();
+                    if (botMessageEl) {
+                        const c3 = botMessageEl.querySelector('.agent-bot-content') || botMessageEl.querySelector('.agent-message-content');
+                        if (c3) c3.innerHTML = '❌ 请求失败: ' + escapeHtml(error.message || '网络错误');
+                    } else {
+                        addAgentMessage('bot', '❌ 请求失败: ' + (error.message || '网络错误'));
+                    }
+                }
+                isAgentProcessing = false;
+                if (!isAgentRefreshing) {
+                    if (sendBtn) sendBtn.disabled = false;
+                    if (quickHealthBtn) quickHealthBtn.disabled = false;
+                    if (quickPlanBtn) quickPlanBtn.disabled = false;
+                    if (stopBtn) stopBtn.style.display = 'none';
+                }
+            });
+        }
+
+        function sendTreatmentPlan() {
+            const sendBtn = document.getElementById('agent-send-btn');
+            const stopBtn = document.getElementById('agent-stop-btn');
+            const quickHealthBtn = document.getElementById('agent-quick-health-btn');
+            const quickPlanBtn = document.getElementById('agent-quick-plan-btn');
+
+            if (isAgentProcessing) return;
+            if (isAgentRefreshing) return;
+            if (!agentSessionId) {
+                addAgentMessage('bot', '❌ 会话未就绪，请刷新后重试。');
+                return;
+            }
+
+            const userId = getQueryParam("user_id");
+            if (!userId) {
+                addAgentMessage('bot', '❌ 缺少 user_id，无法获取患者数据。请从用户结果页打开弹窗。');
+                return;
+            }
+
+            addAgentMessage('user', `治疗方案建议（user_id=${userId}）`);
+
+            if (sendBtn) sendBtn.disabled = true;
+            if (quickHealthBtn) quickHealthBtn.disabled = true;
+            if (quickPlanBtn) quickPlanBtn.disabled = true;
+            if (stopBtn) stopBtn.style.display = 'inline-block';
+
+            const thinkingId = 'thinking-' + Date.now();
+            addAgentMessage('bot', '🤔 正在生成治疗方案建议<span class="agent-loading-dots"></span>', thinkingId, true);
+            isAgentProcessing = true;
+
+            const thinkingElement = document.getElementById(thinkingId);
+            let botMessageId = 'bot-msg-' + Date.now();
+            let botMessageEl = null;
+            let reasoningContent = '';
+            let textContent = '';
+
+            currentAgentAbortController = new AbortController();
+
+            fetch(agentApiBase + '/health-evolution', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken') || ''
+                },
+                body: JSON.stringify({ session_id: agentSessionId, user_id: userId, analysis_type: "treatment_plan" }),
+                signal: currentAgentAbortController.signal
+            })
+            .then(function(response) {
+                if (!response.ok) {
+                    throw new Error('HTTP ' + response.status + ': ' + response.statusText);
+                }
+
+                if (thinkingElement) {
+                    thinkingElement.remove();
+                }
+
+                botMessageEl = addAgentMessage('bot', '', botMessageId);
+                const contentDiv = botMessageEl.querySelector('.agent-bot-content') || botMessageEl.querySelector('.agent-message-content');
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+
+                function readStream() {
+                    return reader.read().then(function(_ref) {
+                        const done = _ref.done;
+                        const value = _ref.value;
+                        if (done) return;
+
+                        buffer += decoder.decode(value, { stream: true });
+                        const lines = buffer.split('\n');
+                        buffer = lines.pop() || '';
+
+                        for (var i = 0; i < lines.length; i++) {
+                            const line = lines[i];
+                            if (line.startsWith('data: ')) {
+                                try {
+                                    const data = JSON.parse(line.slice(6));
+                                    if (data.type === 'reasoning') {
+                                        reasoningContent += data.content;
+                                        if (contentDiv) contentDiv.innerHTML = buildAgentReplyHtml(reasoningContent, textContent);
+                                    } else if (data.type === 'text') {
+                                        const delta = (data.content !== undefined && data.content !== null) ? data.content : (data.text || '');
+                                        textContent += delta;
+                                        if (contentDiv) contentDiv.innerHTML = buildAgentReplyHtml(reasoningContent, textContent);
+                                    } else if (data.type === 'finished') {
+                                        const finalReasoning = data.reasoning || reasoningContent;
+                                        const finalText = data.text || textContent;
+                                        if (contentDiv) contentDiv.innerHTML = buildAgentReplyHtml(finalReasoning, finalText);
+                                        var chatBox = document.getElementById('agent-chat-box');
+                                        if (chatBox) chatBox.scrollTop = chatBox.scrollHeight;
+                                        return;
+                                    } else if (data.type === 'error') {
+                                        if (contentDiv) contentDiv.innerHTML = '❌ 错误: ' + escapeHtml(data.error);
+                                        throw new Error(data.error);
+                                    }
+                                    var chatBox2 = document.getElementById('agent-chat-box');
+                                    if (chatBox2) chatBox2.scrollTop = chatBox2.scrollHeight;
+                                } catch (e) {
+                                    console.error('解析SSE数据失败:', e);
+                                }
+                            }
+                        }
+                        return readStream();
+                    });
+                }
+
+                return readStream();
+            })
+            .then(function() {
+                isAgentProcessing = false;
+                if (!isAgentRefreshing) {
+                    if (sendBtn) sendBtn.disabled = false;
+                    if (quickHealthBtn) quickHealthBtn.disabled = false;
+                    if (quickPlanBtn) quickPlanBtn.disabled = false;
+                    if (stopBtn) stopBtn.style.display = 'none';
+                }
+            })
+            .catch(function(error) {
+                if (error.name === 'AbortError') {
+                    if (thinkingElement && thinkingElement.parentNode) {
+                        const c = thinkingElement.querySelector('.agent-message-content');
+                        if (c) c.innerHTML = '⏹ 已停止';
+                    } else if (botMessageEl) {
+                        const c2 = botMessageEl.querySelector('.agent-bot-content') || botMessageEl.querySelector('.agent-message-content');
+                        if (c2) c2.innerHTML = '⏹ 已停止';
+                    }
+                } else {
+                    console.error('Error:', error);
+                    if (thinkingElement && thinkingElement.parentNode) thinkingElement.remove();
+                    if (botMessageEl) {
+                        const c3 = botMessageEl.querySelector('.agent-bot-content') || botMessageEl.querySelector('.agent-message-content');
+                        if (c3) c3.innerHTML = '❌ 请求失败: ' + escapeHtml(error.message || '网络错误');
+                    } else {
+                        addAgentMessage('bot', '❌ 请求失败: ' + (error.message || '网络错误'));
+                    }
+                }
+                isAgentProcessing = false;
+                if (!isAgentRefreshing) {
+                    if (sendBtn) sendBtn.disabled = false;
+                    if (quickHealthBtn) quickHealthBtn.disabled = false;
+                    if (quickPlanBtn) quickPlanBtn.disabled = false;
+                    if (stopBtn) stopBtn.style.display = 'none';
+                }
+            });
+        }
+
+        /**
+         * 刷新会话：删除当前会话 + 创建新会话 + 重置聊天UI
+         * 复用 brain_agent.py 提供的 agent/session/create & agent/session/delete 能力
+         */
+        function refreshAgentSession() {
+            if (isAgentRefreshing) return;
+
+            const refreshBtn = document.getElementById('agent-refresh-btn');
+            const sendBtn = document.getElementById('agent-send-btn');
+            const stopBtn = document.getElementById('agent-stop-btn');
+            const input = document.getElementById('agent-question-input');
+            const chatBox = document.getElementById('agent-chat-box');
+
+            isAgentRefreshing = true;
+
+            if (refreshBtn) refreshBtn.disabled = true;
+            if (sendBtn) sendBtn.disabled = true;
+            if (stopBtn) stopBtn.style.display = 'none';
+
+            // 中止当前请求（若有）
+            if (currentAgentAbortController) {
+                try { currentAgentAbortController.abort(); } catch (e) {}
+                currentAgentAbortController = null;
+            }
+
+            // 立即清空聊天，避免与旧会话输出混在一起
+            if (chatBox) {
+                chatBox.innerHTML = '';
+            }
+            agentChatHistory = [];
+
+            // 展示刷新中提示（会话创建成功后会被 resetAgentUIWithWelcome() 覆盖）
+            addAgentMessage('bot', '🔄 正在刷新会话...', null, false);
+
+            deleteAgentSession(false)
+                .then(() => createAgentSession())
+                .then((newSessionId) => {
+                    console.log('会话刷新成功:', newSessionId);
+                    resetAgentUIWithWelcome();
+                    if (sendBtn) sendBtn.disabled = false;
+                    if (stopBtn) stopBtn.style.display = 'none';
+                    if (input) input.focus();
+                })
+                .catch((e) => {
+                    console.warn('会话刷新失败:', e);
+                    // 刷新失败时给用户明确提示，并允许重试
+                    if (chatBox) {
+                        chatBox.innerHTML = '';
+                    }
+                    agentChatHistory = [];
+                    addAgentMessage('bot', '❌ 会话刷新失败，请稍后重试。');
+                    if (sendBtn) sendBtn.disabled = false;
+                })
+                .finally(() => {
+                    isAgentRefreshing = false;
+                    if (refreshBtn) refreshBtn.disabled = false;
+                });
+        }
+
+        /**
+         * 强制结束回答：仅中止当前 SSE，保留当前会话（不删会话、不建新会话）；「回答已停止」由 send 的 AbortError 分支写入气泡
+         */
+        function forceStopAgentAnswer() {
+            const stopBtn = document.getElementById('agent-stop-btn');
+            const sendBtn = document.getElementById('agent-send-btn');
+
+            if (currentAgentAbortController) {
+                try { currentAgentAbortController.abort(); } catch (e) {}
+                currentAgentAbortController = null;
+            }
+
+            isAgentProcessing = false;
+            if (sendBtn) sendBtn.disabled = false;
+            if (stopBtn) stopBtn.style.display = 'none';
+
+            console.log('强制终止：已保留当前会话', { sessionId: agentSessionId });
+        }
+
+        // ========== 清空聊天 ==========
+        function resetAgentUIWithWelcome() {
+            const chatBox = document.getElementById('agent-chat-box');
+            if (!chatBox) return;
+            chatBox.innerHTML = '';
+            agentChatHistory = [];
+            // 创建欢迎消息HTML
+            const welcomeHtml = '欢迎使用AIoT实验室的智能体助手';
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'agent-message agent-bot-message';
+            const avatar = document.createElement('div');
+            avatar.className = 'agent-message-avatar';
+            avatar.textContent = '🤖';
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'agent-message-content agent-bot-content';
+            const welcomeDiv = document.createElement('div');
+            welcomeDiv.className = 'agent-welcome-message';
+            welcomeDiv.innerHTML = '<p>' + welcomeHtml + '</p>';
+            contentDiv.appendChild(welcomeDiv);
+            messageDiv.appendChild(avatar);
+            messageDiv.appendChild(contentDiv);
+            chatBox.appendChild(messageDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        /** 创建 opencode 会话（页面打开时调用） */
+        function createAgentSession() {
+            return fetch(agentApiBase + '/create', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken') || ''
+                },
+                body: JSON.stringify({ title: '智能体助手' })
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.success && data.session_id) {
+                    agentSessionId = data.session_id;
+                    return agentSessionId;
+                } else {
+                    throw new Error(data.error || '创建会话失败');
+                }
+            })
+            .catch(function(e) {
+                console.warn('创建会话请求失败:', e);
+                throw e;
+            });
+        }
+
+        /** 删除 opencode 会话
+         * @param {boolean} useBeacon - 是否使用 sendBeacon（用于 beforeunload）
+         */
+        function deleteAgentSession(useBeacon = false) {
+            if (!agentSessionId) return Promise.resolve();
+            var sid = agentSessionId;
+            agentSessionId = null;
+
+            var url = agentApiBase + '/delete';
+            var payload = JSON.stringify({ session_id: sid });
+
+            if (useBeacon && navigator.sendBeacon) {
+                try {
+                    navigator.sendBeacon(url, new Blob([payload], { type: 'application/json' }));
+                } catch (e) {}
+                return Promise.resolve();
+            }
+
+            return fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken') || ''
+                },
+                body: payload,
+                keepalive: true
+            })
+            .then(function(r) { return r.json(); })
+            .catch(function() { return {}; });
+        }
+
+        // ========== 弹窗控制 ==========
+        function openAgentModal() {
+            const overlay = document.getElementById('agent-modal-overlay');
+            if (overlay) {
+                overlay.classList.add('show');
+                resetAgentUIWithWelcome();
+                setTimeout(function() {
+                    var input = document.getElementById('agent-question-input');
+                    if (input) input.focus();
+                }, 300);
+            }
+        }
+
+        function closeAgentModal() {
+            deleteAgentSession(false);
+            const overlay = document.getElementById('agent-modal-overlay');
+            if (overlay) overlay.classList.remove('show');
+            try {
+                if (window.parent && window.parent !== window) {
+                    window.parent.postMessage({ type: 'agent-close' }, '*');
+                }
+            } catch (e) {
+                console.warn('postMessage 关闭指令失败:', e);
+            }
+        }
+
+        // ========== 事件监听 ==========
+        document.addEventListener('DOMContentLoaded', function() {
+            const isEmbedded = detectEmbeddedMode();
+            if (isEmbedded) {
+                document.documentElement.classList.add('agent-embedded');
+                document.body.classList.add('agent-embedded');
+            }
+            createAgentSession();
+            // 修复：当本页被 iframe 嵌入时，overlay 默认 display:none 会导致“空白页”
+            // 弹窗内容全部在 overlay 内，因此这里统一自动打开
+            openAgentModal();
+
+            var input = document.getElementById('agent-question-input');
+            if (input) {
+                input.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        sendAgentQuestion();
+                    }
+                });
+            }
+
+            var overlay = document.getElementById('agent-modal-overlay');
+            if (overlay) {
+                // 嵌入模式下由父页面负责关闭弹窗，避免误触
+                if (!isEmbedded) {
+                    overlay.addEventListener('click', function(e) {
+                        if (e.target === overlay) closeAgentModal();
+                    });
+                }
+            }
+        });
+
+        window.addEventListener('beforeunload', function() {
+            deleteAgentSession(true);
+        });
+
+        // ========== 导出函数供外部调用 ==========
+        window.openAgentModal = openAgentModal;
+        window.closeAgentModal = closeAgentModal;
+    </script>
+</body>
+</html>
+

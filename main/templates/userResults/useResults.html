@@ -31,10 +31,13 @@
         .filter-item input, .filter-item select { height: 34px; padding: 6px 10px; border: 1px solid #e5e7eb; border-radius: 8px; background: #fff; font-size: 13px; color: #2c3e50; }
         .filter-actions { display: flex; gap: 10px; align-items: center; width: 100%; }
         .filter-actions .primary-btn, .filter-actions .link-btn { flex: 1; justify-content: center; }
+        .filter-actions .analysis-btn { flex: 1; justify-content: center; }
         .primary-btn { background: #3498db; color: #fff; border: none; padding: 8px 14px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 700; height: 34px; }
         .primary-btn:hover { background: #2980b9; }
         .link-btn { font-size: 13px; color: #2c3e50; text-decoration: none; padding: 8px 10px; border-radius: 8px; border: 1px solid #e5e7eb; background: #fff; height: 34px; display: inline-flex; align-items: center; }
         .link-btn:hover { background: #f8f9fa; }
+        .analysis-btn { font-size: 13px; color: #ffffff; text-decoration: none; padding: 8px 10px; border-radius: 8px; border: 1px solid #6d28d9; background: #7c3aed; height: 34px; display: inline-flex; align-items: center; cursor: pointer; font-weight: 800; }
+        .analysis-btn:hover { background: #6d28d9; border-color: #5b21b6; }
         @media (max-width: 1100px) { .filter-bar { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
         @media (max-width: 640px) { .filter-bar { grid-template-columns: 1fr; } }
         @media (max-width: 1100px) { .trend-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
@@ -53,6 +56,16 @@
         .pager a:hover { background: #f8f9fa; }
         .pager .disabled { color: #95a5a6; border-color: #eef2f7; background: #f8f9fa; padding: 6px 10px; border-radius: 8px; }
         .pager .meta { color: #7f8c8d; font-weight: 600; }
+
+        /* ====== 分析弹窗（iframe 打开 agent 页面） ====== */
+        .analysis-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 10000; display: none; align-items: center; justify-content: center; padding: 18px; }
+        .analysis-overlay.show { display: flex; }
+        .analysis-modal { width: min(1100px, 100%); height: min(780px, 100%); background: #fff; border-radius: 12px; box-shadow: 0 20px 50px rgba(0,0,0,0.25); overflow: hidden; display: flex; flex-direction: column; border: 1px solid rgba(255,255,255,0.22); }
+        /* 关闭交给里层（iframe 内的 agent.html）处理：外层关闭按钮隐藏 */
+        .analysis-close { display: none; }
+        .analysis-close:hover { background: #e5e7eb; }
+        .analysis-body { flex: 1; background: #fff; }
+        .analysis-iframe { width: 100%; height: 100%; border: 0; display: block; background: #fff; }
     </style>
 </head>
 <body>
@@ -120,6 +133,7 @@
                 <div class="filter-actions">
                     <button class="primary-btn" type="submit">查询</button>
                     <a class="link-btn" href="{% url 'user_results' %}?user_id={{ user_id|urlencode }}">重置</a>
+                    <button class="analysis-btn" type="button" id="openAnalysisBtn">分析</button>
                 </div>
             </form>
 
@@ -358,6 +372,59 @@
                 }
             }
             applyWindow(total > WINDOW_SIZE ? maxStart : 0);
+        })();
+    </script>
+
+    <!-- 分析弹窗 -->
+    <div class="analysis-overlay" id="analysisOverlay" aria-hidden="true">
+        <div class="analysis-modal" role="dialog" aria-modal="true" aria-label="分析">
+            <button class="analysis-close" type="button" id="analysisCloseBtn" aria-label="关闭">×</button>
+            <div class="analysis-body">
+                <iframe class="analysis-iframe" id="analysisIframe" src="about:blank" title="智能体分析"></iframe>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            const overlay = document.getElementById("analysisOverlay");
+            const openBtn = document.getElementById("openAnalysisBtn");
+            const closeBtn = document.getElementById("analysisCloseBtn");
+            const iframe = document.getElementById("analysisIframe");
+            const agentUrl = "{% url 'agent_view' %}?user_id={{ user_id|urlencode }}";
+
+            function openAnalysis() {
+                if (!overlay || !iframe) return;
+                iframe.src = agentUrl;
+                overlay.classList.add("show");
+                overlay.setAttribute("aria-hidden", "false");
+            }
+
+            function closeAnalysis() {
+                if (!overlay || !iframe) return;
+                overlay.classList.remove("show");
+                overlay.setAttribute("aria-hidden", "true");
+                iframe.src = "about:blank";
+            }
+
+            if (openBtn) openBtn.addEventListener("click", openAnalysis);
+            // 外层关闭按钮已隐藏（关闭由 iframe 内触发）
+            if (overlay) {
+                overlay.addEventListener("click", function (e) {
+                    if (e.target === overlay) closeAnalysis();
+                });
+            }
+            document.addEventListener("keydown", function (e) {
+                if (e.key === "Escape") closeAnalysis();
+            });
+
+            // 接收 iframe 内发来的关闭请求（agent.html -> postMessage）
+            window.addEventListener("message", function (ev) {
+                try {
+                    const data = ev && ev.data ? ev.data : null;
+                    if (data && data.type === "agent-close") closeAnalysis();
+                } catch (e) {}
+            });
         })();
     </script>
 </body>

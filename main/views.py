@@ -19,6 +19,7 @@ from main.data.userResults import build_user_results_context, delete_assessment_
 from main.SRGA.SRGA_form import srga_submit
 from main.SRGA.SRGA_form import srga_reset_temp
 from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.clickjacking import xframe_options_sameorigin
 def dashboard(request):
     """仪表板页面视图"""
     dashboard_rows, dashboard_stats = build_dashboard_rows()
@@ -42,7 +43,13 @@ def user_results(request):
         end_date=request.GET.get("end_date", ""),
         health_status=request.GET.get("health_status", ""),
     )
-    return render(request, "userResults/useresults.html", context)
+    # 统一使用实际在前端维护的模板文件名（useResults.html）
+    return render(request, "userResults/useResults.html", context)
+
+
+@xframe_options_sameorigin
+def agent_view(request):
+    return render(request, "agent/agent.html")
 
 
 from django.views.decorators.http import require_POST

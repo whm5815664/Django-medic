@@ -14,7 +14,7 @@ from deepface import DeepFace
 
 
 from main.data.dashboard import build_dashboard_rows
-from main.data.addUser import add_user_from_request
+from main.data.addUser import add_user_from_request, delete_user_and_assessments
 from main.data.userResults import build_user_results_context, delete_assessment_by_user_and_dt
 from main.SRGA.SRGA_form import srga_submit
 from main.SRGA.SRGA_form import srga_reset_temp
@@ -70,6 +70,17 @@ def add_user_api(request):
     try:
         payload = add_user_from_request(request)
         return JsonResponse({"ok": True, "data": payload})
+    except Exception as e:
+        return JsonResponse({"ok": False, "error": str(e)}, status=400)
+
+
+@require_POST
+def delete_user_api(request):
+    try:
+        payload = json.loads((request.body or b"{}").decode("utf-8"))
+        user_id = (payload.get("user_id") or "").strip()
+        data = delete_user_and_assessments(user_id=user_id)
+        return JsonResponse({"ok": True, "data": data})
     except Exception as e:
         return JsonResponse({"ok": False, "error": str(e)}, status=400)
 

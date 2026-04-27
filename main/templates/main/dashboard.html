@@ -443,6 +443,15 @@
             background-color: #27ae60;
         }
 
+        .action-btn.delete {
+            background-color: #e74c3c;
+            color: white;
+        }
+
+        .action-btn.delete:hover {
+            background-color: #c0392b;
+        }
+
         .row-tip {
             font-size: 11px;
             color: #95a5a6;
@@ -579,10 +588,6 @@
     <div class="header">
         <div class="header-left">
             <div class="header-logo">✦ 国民体质健康监测</div>
-            <div class="nav-links">
-                <a href="#" class="nav-link">控制</a>
-                <a href="#" class="nav-link">管理</a>
-            </div>
         </div>
         <a href="#" class="back-btn">← 返回</a>
     </div>
@@ -616,12 +621,12 @@
                     <div class="stat-card total">
                         <div class="stat-header">
                             <div>
-                                <div class="stat-label">数据类型</div>
-                                <div class="stat-value">-</div>
+                                <div class="stat-label">健康异常人数</div>
+                                <div class="stat-value">{{ dashboard_stats.abnormal_count|default:"-" }}</div>
                             </div>
                             <div class="stat-icon">📊</div>
                         </div>
-                        <div class="stat-subtitle">健康数据类型统计</div>
+                        <div class="stat-subtitle">当前健康异常总人数</div>
                     </div>
                 </div>
             </div>
@@ -717,6 +722,7 @@
                                 <div class="action-buttons">
                                     <a class="action-btn view" href="{% url 'user_results' %}?user_id={{ row.userID|urlencode }}">查看</a>
                                     <a class="action-btn evaluate" href="{% url 'srga_record_form' %}?user_id={{ row.userID|urlencode }}&name={{ row.userName|urlencode }}&age={{ row.age }}">评估</a>
+                                    <button class="action-btn delete" type="button" data-user-id="{{ row.userID }}">删除</button>
                                 </div>
                             </td>
                         </tr>
@@ -864,6 +870,40 @@
                 }
             });
         })();
+
+        // 删除用户（含全部检测记录）
+        document.addEventListener('click', async (e) => {
+            const btn = e.target?.closest?.('.action-btn.delete');
+            if (!btn) return;
+            const userId = (btn.getAttribute('data-user-id') || '').trim();
+            if (!userId) return;
+
+            const tr = btn.closest('tr');
+            const name = (tr?.getAttribute('data-name') || '').trim();
+
+            if (!confirm(`确认删除${name ? `【${name}】` : ''}（${userId}）吗？`)) return;
+            if (!confirm('再次确认：将删除该用户信息与全部检测记录，且无法恢复。确定继续吗？')) return;
+
+            btn.disabled = true;
+            try {
+                const resp = await fetch('/api/users/delete/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken'),
+                    },
+                    body: JSON.stringify({ user_id: userId }),
+                });
+                const json = await resp.json().catch(() => ({}));
+                if (!resp.ok || !json.ok) {
+                    throw new Error(json.error || `删除失败（HTTP ${resp.status}）`);
+                }
+                location.reload();
+            } catch (err) {
+                alert(err?.message || '删除失败');
+                btn.disabled = false;
+            }
+        });
 
         // 将日期字符串转换为Date对象进行比较（只比较日期，不包括时间）
         function parseDate(dateStr) {

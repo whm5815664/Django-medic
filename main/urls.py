@@ -9,6 +9,7 @@ urlpatterns = [
     
     # 用户管理页面
     path("api/users/add/", views.add_user_api, name="add_user_api"),
+    path("api/users/delete/", views.delete_user_api, name="delete_user_api"),
     
     # 模型
     path("srga/record/", views.srga_record_form, name="srga_record_form"),

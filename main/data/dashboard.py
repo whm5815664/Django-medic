@@ -9,6 +9,8 @@ from __future__ import annotations
 from datetime import date, datetime
 from typing import Any
 
+from django.db.models import OuterRef, Subquery
+
 from main.models import Assessment, User
 
 
@@ -85,6 +87,21 @@ def _latest_assessment_by_user_id(user_ids: list[str]) -> dict[str, dict[str, An
     return out
 
 
+def _count_latest_unhealthy_users() -> int:
+    """
+    统计“健康异常人数”：
+    - 以 User 为基表（保证人不重复）
+    - 对每个 userID 取最新一条 Assessment.health_status
+    - 最新检测为“不健康”的用户计数
+    """
+    latest_status_sq = Subquery(
+        Assessment.objects.filter(userID=OuterRef("userID"))
+        .order_by("-assessment_date")
+        .values("health_status")[:1]
+    )
+    return User.objects.annotate(latest_health_status=latest_status_sq).filter(latest_health_status="不健康").count()
+
+
 def build_dashboard_rows() -> tuple[list[dict[str, Any]], dict[str, Any]]:
     """
     查询全部 User（created_at 倒序）；
@@ -120,5 +137,5 @@ def build_dashboard_rows() -> tuple[list[dict[str, Any]], dict[str, Any]]:
             }
         )
 
-    stats = {"user_count": len(rows)}
+    stats = {"user_count": len(rows), "abnormal_count": _count_latest_unhealthy_users()}
     return rows, stats

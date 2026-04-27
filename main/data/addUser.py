@@ -6,7 +6,7 @@ from datetime import date
 from django.db import IntegrityError, transaction
 from django.http import HttpRequest
 
-from main.models import User
+from main.models import Assessment, User
 
 
 @dataclass(frozen=True)
@@ -62,3 +62,11 @@ def add_user_from_request(request: HttpRequest) -> dict:
         raise ValueError("该身份证已存在，不能重复建档")
 
     return {"userID": data.userID}
+
+
+def delete_user_and_assessments(user_id: str) -> dict:
+    uid = _require(user_id, "用户ID")
+    with transaction.atomic():
+        assessments_deleted, _ = Assessment.objects.filter(userID=uid).delete()
+        user_deleted, _ = User.objects.filter(userID=uid).delete()
+    return {"userID": uid, "deleted_user": user_deleted, "deleted_assessments": assessments_deleted}

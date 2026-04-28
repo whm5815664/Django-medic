@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>情绪健康评估系统</title>
+    <title>健康评估采集</title>
     <style>
         * {
             box-sizing: border-box;
@@ -516,8 +516,8 @@
 </head>
 <body>
     <div class="page-shell">
-<button class="back-btn" onclick="window.location.href='/'">返回</button>
-        <h1>情绪健康评估系统</h1>
+<a class="back-btn" href="{% url 'dashboard' %}">返回</a>
+        <h1>健康评估采集</h1>
 
         <div class="main-layout">
             <div class="camera-panel">
@@ -702,9 +702,7 @@
                 const track = stream.getVideoTracks()[0];
                 console.log('当前轨道信息:', track.getSettings());
 
-                statusDiv.innerText = preferredCamera
-                    ? 'Orbbec RGB 摄像头已就绪'
-                    : '默认摄像头已就绪';
+                statusDiv.innerText = '摄像头已就绪';
             } catch (err) {
                 console.error(err);
                 statusDiv.innerText = '无法访问摄像头: ' + err.message;

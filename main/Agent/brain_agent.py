@@ -208,6 +208,13 @@ def stream_output(
     tool_stdout_emitted = set()  # 已推送 stdout 的 bash/shell part（需在 status=completed 时再推）
     last_message_id = None
     stream_started = time.time()
+    last_delta_ts = time.time()
+    pending_finish = False
+    pending_finish_since: Optional[float] = None
+
+    # 当检测到 finish 时，不立刻结束；需要满足“输出已稳定不再增长”才发 finished 给前端。
+    # 这是为了避免 opencode 在 parts 仍在就地补全时提前写入 info.finish，导致前端过早停止读流。
+    finish_stable_seconds = 1.0
 
     while True:
         try:
@@ -260,9 +267,13 @@ def stream_output(
                 printed_tool_ids = set()
                 tool_stdout_emitted = set()
                 last_message_id = message_id
+                last_delta_ts = time.time()
+                pending_finish = False
+                pending_finish_since = None
                 print(f"\n===== assistant message: {message_id} =====", flush=True)
 
             finished = False
+            had_delta_this_poll = False
 
             for part in assistant_msg.get("parts", []):
                 part_id = part.get("id")
@@ -289,6 +300,8 @@ def stream_output(
 
                         print(delta, end="", flush=True)
                         printed_text_lens[part_id] = len(current_text)
+                        had_delta_this_poll = True
+                        last_delta_ts = time.time()
                         
                         # yield 给前端
                         yield {"type": part_type, "content": delta}
@@ -345,10 +358,19 @@ def stream_output(
             if not finished and info_finish and info_finish != "tool-calls":
                 finished = True
 
-            if finished:
-                print("\n--- 完成 ---", flush=True)
-                yield {"type": "finished", "content": ""}
-                break
+            # 看到 finished 先进入“待结束”状态，避免最后一段增量还没轮询到就提前 break
+            if finished and not pending_finish:
+                pending_finish = True
+                pending_finish_since = time.time()
+
+            # 若已进入待结束状态：需要满足一段时间内没有任何增量输出，才真正结束 SSE
+            if pending_finish:
+                now = time.time()
+                since_delta = now - last_delta_ts
+                since_finish = now - (pending_finish_since or now)
+                if since_delta >= finish_stable_seconds and since_finish >= finish_stable_seconds:
+                    yield {"type": "finished", "content": ""}
+                    break
 
         except Exception as e:
             print("查询失败：", e, flush=True)

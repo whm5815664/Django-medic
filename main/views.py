@@ -20,6 +20,12 @@ from main.SRGA.SRGA_form import srga_submit
 from main.SRGA.SRGA_form import srga_reset_temp
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.clickjacking import xframe_options_sameorigin
+
+
+def welcome(request):
+    return render(request, "main/welcome.html")
+
+
 def dashboard(request):
     """仪表板页面视图"""
     dashboard_rows, dashboard_stats = build_dashboard_rows()

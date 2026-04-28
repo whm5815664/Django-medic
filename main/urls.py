@@ -4,8 +4,10 @@ from main import views
 from main.Agent import brain_agent, tool
 
 urlpatterns = [
-    # 主页
-    path("", views.dashboard, name="dashboard"),
+    # 默认欢迎页
+    path("", views.welcome, name="welcome"),
+    # 仪表板
+    path("dashboard/", views.dashboard, name="dashboard"),
     
     # 用户管理页面
     path("api/users/add/", views.add_user_api, name="add_user_api"),

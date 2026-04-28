@@ -3,9 +3,34 @@ import base64
 import cv2
 import numpy as np
 from deepface import DeepFace
+from PIL import Image, ImageDraw, ImageFont
 
 
 ABNORMAL_EMOTIONS = {"sad", "angry", "fear", "disgust"}
+
+
+def _cv2_put_text_unicode(img_bgr, text, org, font_size=22, color_bgr=(255, 255, 255)):
+    """
+    OpenCV 的 Hershey 字体不支持中文，使用 Pillow 渲染 Unicode 文本后再转回 OpenCV 图像。
+    仅针对本项目当前 Windows 运行环境（微软雅黑）。
+    """
+    if img_bgr is None:
+        return img_bgr
+
+    x, y = int(org[0]), int(org[1])
+    img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
+    pil_img = Image.fromarray(img_rgb)
+    draw = ImageDraw.Draw(pil_img)
+
+    font = ImageFont.truetype(r"C:\Windows\Fonts\msyh.ttc", font_size)
+    r, g, b = int(color_bgr[2]), int(color_bgr[1]), int(color_bgr[0])
+
+    outline = (0, 0, 0)
+    for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+        draw.text((x + dx, y + dy), text, font=font, fill=outline)
+    draw.text((x, y), text, font=font, fill=(r, g, b))
+
+    return cv2.cvtColor(np.array(pil_img), cv2.COLOR_RGB2BGR)
 
 
 def get_bmi_info(profile=None):
@@ -222,14 +247,12 @@ def analyze_emotion_logic(image_data, profile=None, blood_pressure=None, blood_s
         if sugar_info["blood_sugar"] is not None:
             label += f" | BS {sugar_info['blood_sugar']}"
 
-        cv2.putText(
+        img = _cv2_put_text_unicode(
             img,
             label,
-            (x, max(30, y - 10)),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.7,
-            (255, 255, 255),
-            2
+            (x, max(8, y - 28)),
+            font_size=22,
+            color_bgr=(255, 255, 255),
         )
 
     _, buffer = cv2.imencode('.jpg', img)

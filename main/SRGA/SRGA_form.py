@@ -153,7 +153,7 @@ def srga_reset_temp(request):
             except Exception:
                 pass
 
-        # 重建 images / audios（删除整个目录再创建，确保全清空）
+        # 重建 images / audios（删除整个目录再创建）
         for d in (images_dir, audios_dir):
             if os.path.exists(d):
                 try:

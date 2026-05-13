@@ -31,14 +31,14 @@ class SingleSamplePreprocessor:
         self.audio_dur = 2.0
         self.n_samples = int(self.audio_sr * self.audio_dur)
         
-        # 1. 加载 CSV 并计算归一化参数 (与训练集完全一致)
+        # 1. 加载 CSV 并计算归一化参数 
         csv_path = os.path.join(root_dir, 'tabular.csv')
         if not os.path.exists(csv_path):
             raise FileNotFoundError(f"找不到表格文件: {csv_path}")
         
         self.df = pd.read_csv(csv_path)
         
-        # 智能列名匹配 (复制自 Dataset 代码)
+        # 智能列名匹配
         all_cols = self.df.columns.tolist()
         target_mapping = {
             'weight': ['weight', 'weight(kg)', 'Weight', 'Weight(kg)'],

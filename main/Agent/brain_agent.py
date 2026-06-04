@@ -7,7 +7,7 @@ from django.http import JsonResponse, StreamingHttpResponse
 from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt
 
-from .ollama_config import OPENCODE_BASE_URL, OPENCODE_MODEL
+from .ollama_config import OPENCODE_BASE_URL, OPENCODE_MODEL, get_model_config
 
 OPENCODE_BASE_URL = OPENCODE_BASE_URL
 model = OPENCODE_MODEL
@@ -182,9 +182,14 @@ def _build_sse_response(base_url: str, session_id: str, target_parent_id: Option
     return response
 
 
-def send_message_sse(session_id: str, message: str) -> StreamingHttpResponse:
+def send_message_sse(
+    session_id: str,
+    message: str,
+    model_id: Optional[str] = None,
+) -> StreamingHttpResponse:
     """统一入口：发送 message 到会话，并以 SSE 返回本次输出。"""
-    send_async_message(message, OPENCODE_BASE_URL, session_id, model_config=model)
+    model_config = get_model_config(model_id) if model_id else model
+    send_async_message(message, OPENCODE_BASE_URL, session_id, model_config=model_config)
     target_parent_id = _get_latest_user_message_id(OPENCODE_BASE_URL, session_id)
     return _build_sse_response(OPENCODE_BASE_URL, session_id, target_parent_id)
 
@@ -392,7 +397,8 @@ def agent_send_message_view(request):
             return JsonResponse({"success": False, "error": "缺少 session_id"})
         if not message:
             return JsonResponse({"success": False, "error": "消息不能为空"})
-        return send_message_sse(session_id, message)
+        model_id = (data.get("model_id") or "").strip() or None
+        return send_message_sse(session_id, message, model_id=model_id)
         
     except Exception as e:
         return JsonResponse({"success": False, "error": str(e)})

@@ -88,7 +88,8 @@ def agent_health_evolution_view(request):
             message = PRESET_PROMPT.strip() + "\n\n患者数据(JSON)：\n" + json.dumps(payload, ensure_ascii=False)
             sent_users.add(user_id)
 
-        return send_message_sse(session_id, message)
+        model_id = (data.get("model_id") or "").strip() or None
+        return send_message_sse(session_id, message, model_id=model_id)
 
     except Exception as e:
         return JsonResponse({"success": False, "error": str(e)})

@@ -55,7 +55,16 @@ def user_results(request):
 
 @xframe_options_sameorigin
 def agent_view(request):
-    return render(request, "agent/agent.html")
+    from main.Agent.ollama_config import DEFAULT_MODEL_ID, OPENCODE_MODELS
+
+    return render(
+        request,
+        "agent/agent.html",
+        {
+            "agent_models": OPENCODE_MODELS,
+            "agent_default_model_id": DEFAULT_MODEL_ID,
+        },
+    )
 
 
 from django.views.decorators.http import require_POST

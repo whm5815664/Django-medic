@@ -620,6 +620,34 @@
             white-space: nowrap;
         }
 
+        .agent-model-select {
+            min-width: 180px;
+            max-width: 240px;
+            margin-left: auto;
+            padding: 6px 28px 6px 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            background: #f9fafb url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M3 4.5L6 7.5L9 4.5'/%3E%3C/svg%3E") no-repeat right 8px center;
+            background-size: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #374151;
+            cursor: pointer;
+            appearance: none;
+            -webkit-appearance: none;
+        }
+
+        .agent-model-select:focus {
+            outline: none;
+            border-color: #6366f1;
+            box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15);
+        }
+
+        .agent-model-select:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
+
         .agent-quickbar-actions {
             display: flex;
             gap: 8px;
@@ -739,6 +767,11 @@
                         <button class="agent-health-btn" type="button" id="agent-quick-health-btn" onclick="sendHealthEvolution()">健康演化分析</button>
                         <button class="agent-health-btn" type="button" id="agent-quick-plan-btn" onclick="sendTreatmentPlan()">治疗方案建议</button>
                     </div>
+                    <select id="agent-model-select" class="agent-model-select" title="选择大模型">
+                        {% for m in agent_models %}
+                        <option value="{{ m.id }}"{% if m.id == agent_default_model_id %} selected{% endif %}>{{ m.label }}</option>
+                        {% endfor %}
+                    </select>
                 </div>
 
                 <!-- 输入区域 -->
@@ -931,6 +964,7 @@
             addAgentMessage('user', question);
             input.value = '';
             sendBtn.disabled = true;
+            setAgentModelSelectDisabled(true);
             if (stopBtn) stopBtn.style.display = 'inline-block';
 
             const thinkingId = 'thinking-' + Date.now();
@@ -951,7 +985,11 @@
                     'Content-Type': 'application/json',
                     'X-CSRFToken': getCookie('csrftoken') || ''
                 },
-                body: JSON.stringify({ session_id: agentSessionId, message: question }),
+                body: JSON.stringify({
+                    session_id: agentSessionId,
+                    message: question,
+                    model_id: getSelectedAgentModelId()
+                }),
                 signal: currentAgentAbortController.signal
             })
             .then(function(response) {
@@ -1041,6 +1079,7 @@
                 isAgentProcessing = false;
                 if (!isAgentRefreshing) {
                     sendBtn.disabled = false;
+                    setAgentModelSelectDisabled(false);
                     if (stopBtn) stopBtn.style.display = 'none';
                 }
             })
@@ -1076,6 +1115,7 @@
                 isAgentProcessing = false;
                 if (!isAgentRefreshing) {
                     sendBtn.disabled = false;
+                    setAgentModelSelectDisabled(false);
                     if (stopBtn) stopBtn.style.display = 'none';
                 }
             });
@@ -1088,6 +1128,16 @@
             } catch (e) {
                 return "";
             }
+        }
+
+        function getSelectedAgentModelId() {
+            const select = document.getElementById('agent-model-select');
+            return select ? (select.value || '').trim() : '';
+        }
+
+        function setAgentModelSelectDisabled(disabled) {
+            const select = document.getElementById('agent-model-select');
+            if (select) select.disabled = !!disabled;
         }
 
         function sendHealthEvolution() {
@@ -1115,6 +1165,7 @@
             if (sendBtn) sendBtn.disabled = true;
             if (quickHealthBtn) quickHealthBtn.disabled = true;
             if (quickPlanBtn) quickPlanBtn.disabled = true;
+            setAgentModelSelectDisabled(true);
             if (stopBtn) stopBtn.style.display = 'inline-block';
 
             const thinkingId = 'thinking-' + Date.now();
@@ -1135,7 +1186,12 @@
                     'Content-Type': 'application/json',
                     'X-CSRFToken': getCookie('csrftoken') || ''
                 },
-                body: JSON.stringify({ session_id: agentSessionId, user_id: userId, analysis_type: "health_evolution" }),
+                body: JSON.stringify({
+                    session_id: agentSessionId,
+                    user_id: userId,
+                    analysis_type: "health_evolution",
+                    model_id: getSelectedAgentModelId()
+                }),
                 signal: currentAgentAbortController.signal
             })
             .then(function(response) {
@@ -1206,6 +1262,7 @@
                     if (sendBtn) sendBtn.disabled = false;
                     if (quickHealthBtn) quickHealthBtn.disabled = false;
                     if (quickPlanBtn) quickPlanBtn.disabled = false;
+                    setAgentModelSelectDisabled(false);
                     if (stopBtn) stopBtn.style.display = 'none';
                 }
             })
@@ -1233,6 +1290,7 @@
                     if (sendBtn) sendBtn.disabled = false;
                     if (quickHealthBtn) quickHealthBtn.disabled = false;
                     if (quickPlanBtn) quickPlanBtn.disabled = false;
+                    setAgentModelSelectDisabled(false);
                     if (stopBtn) stopBtn.style.display = 'none';
                 }
             });
@@ -1262,6 +1320,7 @@
             if (sendBtn) sendBtn.disabled = true;
             if (quickHealthBtn) quickHealthBtn.disabled = true;
             if (quickPlanBtn) quickPlanBtn.disabled = true;
+            setAgentModelSelectDisabled(true);
             if (stopBtn) stopBtn.style.display = 'inline-block';
 
             const thinkingId = 'thinking-' + Date.now();
@@ -1282,7 +1341,12 @@
                     'Content-Type': 'application/json',
                     'X-CSRFToken': getCookie('csrftoken') || ''
                 },
-                body: JSON.stringify({ session_id: agentSessionId, user_id: userId, analysis_type: "treatment_plan" }),
+                body: JSON.stringify({
+                    session_id: agentSessionId,
+                    user_id: userId,
+                    analysis_type: "treatment_plan",
+                    model_id: getSelectedAgentModelId()
+                }),
                 signal: currentAgentAbortController.signal
             })
             .then(function(response) {
@@ -1353,6 +1417,7 @@
                     if (sendBtn) sendBtn.disabled = false;
                     if (quickHealthBtn) quickHealthBtn.disabled = false;
                     if (quickPlanBtn) quickPlanBtn.disabled = false;
+                    setAgentModelSelectDisabled(false);
                     if (stopBtn) stopBtn.style.display = 'none';
                 }
             })
@@ -1380,6 +1445,7 @@
                     if (sendBtn) sendBtn.disabled = false;
                     if (quickHealthBtn) quickHealthBtn.disabled = false;
                     if (quickPlanBtn) quickPlanBtn.disabled = false;
+                    setAgentModelSelectDisabled(false);
                     if (stopBtn) stopBtn.style.display = 'none';
                 }
             });
@@ -1458,6 +1524,7 @@
 
             isAgentProcessing = false;
             if (sendBtn) sendBtn.disabled = false;
+            setAgentModelSelectDisabled(false);
             if (stopBtn) stopBtn.style.display = 'none';
 
             console.log('强制终止：已保留当前会话', { sessionId: agentSessionId });

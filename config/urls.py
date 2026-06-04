@@ -21,5 +21,12 @@ from django.urls import include, path
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("", include("main.urls")),
-    
 ]
+
+# 开发环境（含 runsslserver）提供 static 文件，否则 Chart.js 等本地脚本 404
+from django.conf import settings
+
+if settings.DEBUG:
+    from django.contrib.staticfiles.urls import staticfiles_urlpatterns
+
+    urlpatterns += staticfiles_urlpatterns()

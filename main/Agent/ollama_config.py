@@ -7,8 +7,8 @@ OPENCODE_BASE_URL = "http://localhost:4096"
 #OPENCODE_MODEL = {'model':'qwen3.5:0.8b', 'modelID': 'qwen3.5:0.8b', 'providerID': 'ollama'}
 
 # 免费api
-#OPENCODE_MODEL = {'model': 'Big Pickle', 'modelID': 'big-pickle', 'providerID': 'opencode'}
-OPENCODE_MODEL = {'model':'MiniMax M2.5 Free', 'modelID': 'minimax-m2.5-free', 'providerID': 'opencode'}
+OPENCODE_MODEL = {'model': 'Big Pickle', 'modelID': 'big-pickle', 'providerID': 'opencode'}
+#OPENCODE_MODEL = {'model':'MiniMax M2.5 Free', 'modelID': 'minimax-m2.5-free', 'providerID': 'opencode'}
 
 # 第三方咸鱼api http://ai.wenmodel.com/console(https://m.tb.cn/h.ioaPOiq?tk=QGsd5gSbXZ)
 #OPENCODE_MODEL = {'model':'qwen3.5-plus', 'modelID': 'qwen3.5-plus', 'providerID': 'WenModel'}

@@ -1,8 +1,3 @@
-# Ollama API配置
-OLLAMA_BASE_URL = "http://localhost:11435"
-OLLANA_MODEL_NAME = "deepseek-r1:1.5b"
-
-
 # OPENCODE API配置
 OPENCODE_BASE_URL = "http://localhost:4096"
 

@@ -7,16 +7,9 @@ OPENCODE_BASE_URL = "http://localhost:4096"
 OPENCODE_MODELS = [
     {
         "id": "big-pickle",
-        "label": "Big Pickle (免费)",
+        "label": "默认模型",
         "model": "Big Pickle",
         "modelID": "big-pickle",
-        "providerID": "opencode",
-    },
-    {
-        "id": "minimax-m2.5-free",
-        "label": "MiniMax M2.5 Free",
-        "model": "MiniMax M2.5 Free",
-        "modelID": "minimax-m2.5-free",
         "providerID": "opencode",
     },
     {

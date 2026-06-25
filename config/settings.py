@@ -92,14 +92,18 @@ WSGI_APPLICATION = "config.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
+def _env_str(key: str, default: str) -> str:
+    return os.environ.get(key, default).strip()
+
+
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.mysql",  # 数据库引擎
-        "NAME": "web_medic",  # 数据库名称
-        "HOST": "127.0.0.1",  # 数据库地址，本机 ip 地址 127.0.0.1
-        "PORT": 3306,  # 端口
-        "USER": "root",  # 数据库用户名
-        "PASSWORD": "",  # 数据库密码
+        "NAME": _env_str("DB_NAME", "web_medic"),  # 数据库名称
+        "HOST": _env_str("DB_HOST", "127.0.0.1"),  # 数据库地址
+        "PORT": int(_env_str("DB_PORT", "3306")),  # 端口
+        "USER": _env_str("DB_USER", "root"),  # 数据库用户名
+        "PASSWORD": _env_str("DB_PASSWORD", ""),  # 数据库密码
         "OPTIONS": {
             "charset": "utf8mb4",
         },
